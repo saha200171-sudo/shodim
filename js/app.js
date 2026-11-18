@@ -898,7 +898,10 @@ function groupSheet(g, kind = 'city') {
           <button class="chip ${G.status === 'dream' ? 'active' : 'paper'}" data-st="dream">мечтаем</button>
           <button class="chip ${G.status === 'planned' ? 'active' : 'paper'}" data-st="planned">выбрать даты</button>
           <button class="chip ${G.status === 'done' ? 'active' : 'paper'}" data-st="done">съездили</button></div>
-        ${G.status !== 'dream' ? `<div class="row"><label class="input grow"><span class="t-sub">с</span><input type="date" data-start value="${G.start}"></label><label class="input grow"><span class="t-sub">по</span><input type="date" data-end value="${G.end}"></label></div>` : `<span class="t-sub">Даты можно добавить позже, когда поездка станет реальной.</span>`}</div>` : ''}
+        ${G.status !== 'dream' ? `<div class="row">
+            <button class="input grow" data-start style="text-align:left;padding:0 12px;gap:6px"><span class="t-sub">с</span><span class="grow">${G.start ? fmtDayMonth(G.start) + ' ' + G.start.slice(0, 4) : 'выбрать'}</span></button>
+            <button class="input grow" data-end style="text-align:left;padding:0 12px;gap:6px"><span class="t-sub">по</span><span class="grow">${G.end ? fmtDayMonth(G.end) + ' ' + G.end.slice(0, 4) : 'выбрать'}</span></button></div>`
+          : `<span class="t-sub">Даты можно добавить позже, когда поездка станет реальной.</span>`}</div>` : ''}
       <div class="field"><span class="label">Обложка</span><div class="swatches">
         <label class="swatch photo ${hasPhoto() ? 'on' : ''}">${hasPhoto() ? `<img src="${esc(G.coverUrl || url(g.cover_path))}" alt="">` : icon('camera')}<input type="file" accept="image/*" hidden data-file></label>
         ${Object.entries(SWATCH).map(([k, c]) => `<button class="swatch ${!hasPhoto() && G.color === k ? 'on' : ''}" data-color="${k}" style="background:${c}">${!hasPhoto() && G.color === k ? icon('check', 24) : ''}</button>`).join('')}</div>
@@ -907,8 +910,11 @@ function groupSheet(g, kind = 'city') {
     body.querySelector('[data-name]').addEventListener('input', e => { G.name = e.target.value; });
     body.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { G.kind = b.dataset.kind; if (!g && !G.coverFile) G.color = G.kind === 'trip' ? 'sky' : 'peach'; draw(); });
     body.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { G.status = b.dataset.st; draw(); });
-    body.querySelector('[data-start]')?.addEventListener('change', e => { G.start = e.target.value; });
-    body.querySelector('[data-end]')?.addEventListener('change', e => { G.end = e.target.value; });
+    // даты поездки: будущее разрешено, быстрых «вчера/сегодня» нет
+    body.querySelector('[data-start]')?.addEventListener('click', () => dateSheet({ value: G.start || todayISO(), title: 'Начало поездки', sub: G.name, max: null, quick: false,
+      onPick: d => { G.start = d; if (G.end && G.end < d) G.end = ''; draw(); } }));
+    body.querySelector('[data-end]')?.addEventListener('click', () => dateSheet({ value: G.end || G.start || todayISO(), title: 'Конец поездки', sub: G.name, max: null, quick: false, min: G.start || null,
+      onPick: d => { G.end = d; draw(); } }));
     body.querySelectorAll('[data-color]').forEach(b => b.onclick = () => { G.color = b.dataset.color; G.coverFile = null; G.coverUrl = null; if (g?.cover_path) G.coverRemoved = true; draw(); });
     body.querySelector('[data-file]').addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; G.coverFile = f; G.coverUrl = URL.createObjectURL(f); draw(); });
     body.querySelector('[data-save]').onclick = async e => {
@@ -989,6 +995,41 @@ function moveSheet(p) {
   });
 }
 
+// ----- Календарь (как в макете, экран 10) — вместо системного выбора даты
+const MONTHS_CAP = MONTHS_NOM.map(m => m[0].toUpperCase() + m.slice(1));
+const isoDate = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+function dateSheet({ value, title = 'Когда были?', sub = '', max = todayISO(), min = null, quick = true, onPick }) {
+  let sel = value || todayISO();
+  let [vy, vm] = sel.split('-').map(Number); vm -= 1;
+  const { el, close } = openSheet('<div data-body class="stack-m" style="gap:20px"></div>');
+  const body = el.querySelector('[data-body]');
+  const draw = () => {
+    const offset = (new Date(vy, vm, 1).getDay() + 6) % 7;           // понедельник — первый
+    const days = new Date(vy, vm + 1, 0).getDate();
+    const today = todayISO(), month = isoDate(vy, vm, 1).slice(0, 7);
+    let cells = '<span></span>'.repeat(offset);
+    for (let d = 1; d <= days; d++) {
+      const k = isoDate(vy, vm, d), off = (max && k > max) || (min && k < min);
+      cells += `<button class="cal-day ${k === sel ? 'on' : ''} ${k === today ? 'today' : ''}" data-d="${k}" ${off ? 'disabled' : ''}>${d}</button>`;
+    }
+    body.innerHTML = `<div class="stack-xs"><h2 class="h2">${esc(title)}</h2>${sub ? `<span class="t-sub">${esc(sub)}</span>` : ''}</div>
+      ${quick ? `<div class="chips">${[[0, 'сегодня'], [-1, 'вчера'], [-2, 'позавчера']].map(([n, t]) => `<button class="chip ${sel === shiftDays(n) ? 'active' : 'paper'}" data-q="${n}">${t}</button>`).join('')}</div>` : ''}
+      <div class="cal">
+        <div class="cal-head"><button class="cal-nav" data-m="-1" aria-label="Предыдущий месяц" ${min && month <= min.slice(0, 7) ? 'disabled' : ''}>${icon('back', 20)}</button>
+          <span class="t-cards">${MONTHS_CAP[vm]} ${vy}</span>
+          <button class="cal-nav" data-m="1" aria-label="Следующий месяц" ${max && month >= max.slice(0, 7) ? 'disabled' : ''}>${icon('right', 20)}</button></div>
+        <div class="cal-grid">${['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(w => `<span class="cal-wd">${w}</span>`).join('')}${cells}</div>
+      </div>
+      ${max ? `<span class="t-sub">Можно выбрать любую прошедшую дату — даже если карточку заполняете спустя время.</span>` : ''}
+      <button class="btn" data-ok>Готово</button>`;
+    body.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { sel = b.dataset.d; draw(); });
+    body.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { sel = shiftDays(+b.dataset.q); [vy, vm] = sel.split('-').map(Number); vm -= 1; draw(); });
+    body.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { vm += +b.dataset.m; if (vm < 0) { vm = 11; vy--; } if (vm > 11) { vm = 0; vy++; } draw(); });
+    body.querySelector('[data-ok]').onclick = () => { close(); onPick(sel); };
+  };
+  draw();
+}
+
 // ----- Визит: отметить / изменить
 function visitSheet(p, v) {
   const V = {
@@ -1000,8 +1041,7 @@ function visitSheet(p, v) {
   const draw = () => {
     body.innerHTML = `<div class="stack-xs"><h2 class="h2">${v ? 'Изменить визит' : 'Мы тут были!'}</h2><span class="t-sub">${esc(p.name)}${v ? '' : ` · визит №${visitsOf(p.id).length + 1}`}</span></div>
       <div class="field"><span class="label">Когда</span>
-        <label class="input" style="position:relative"><span style="color:var(--accent)">${icon('cal')}</span><span class="t-bold grow">${fmtDate(V.date)}</span>${icon('down', 20)}
-          <input type="date" data-date max="${todayISO()}" value="${V.date}" style="position:absolute;inset:0;opacity:0;width:100%"></label>
+        <button class="input" data-pick style="text-align:left"><span style="color:var(--accent)">${icon('cal')}</span><span class="t-bold grow">${fmtDate(V.date)}</span>${icon('down', 20)}</button>
         <div class="chips">${[[0, 'сегодня'], [-1, 'вчера'], [-2, 'позавчера']].map(([d, t]) => `<button class="chip ${V.date === shiftDays(d) ? 'active' : 'paper'}" data-day="${d}">${t}</button>`).join('')}</div>
         <span class="t-sub">Можно выбрать любую прошедшую дату — даже если заполняете спустя время.</span></div>
       <div class="field"><span class="label">Фото</span><div class="thumbs">
@@ -1012,9 +1052,7 @@ function visitSheet(p, v) {
       <button class="row" data-want style="text-align:left"><span style="color:var(--accent)">${icon('heartF')}</span><span class="t-bold grow">Хотим сюда снова</span><span class="switch ${V.want ? 'on' : ''}"></span></button>
       <button class="btn" data-save>${v ? 'Сохранить' : 'Сохранить в альбом'}</button>
       ${v ? `<button class="link-btn danger" data-delete>Удалить визит</button>` : ''}`;
-    const dateInp = body.querySelector('[data-date]');
-    dateInp.addEventListener('change', e => { if (e.target.value) { V.date = e.target.value > todayISO() ? todayISO() : e.target.value; draw(); } });
-    dateInp.addEventListener('click', () => { try { dateInp.showPicker(); } catch { /* старые браузеры */ } });
+    body.querySelector('[data-pick]').onclick = () => dateSheet({ value: V.date, sub: p.name, onPick: d => { V.date = d; draw(); } });
     body.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { V.date = shiftDays(+b.dataset.day); draw(); });
     body.querySelector('[data-note]').addEventListener('input', e => { V.note = e.target.value; });
     body.querySelector('[data-want]').onclick = () => { V.want = !V.want; draw(); };
@@ -1103,6 +1141,7 @@ function seedDemo() {
       visit: () => visitSheet(placeById(id), null), editvisit: () => { const v = S.visits.find(x => x.id === id); visitSheet(placeById(v.place_id), v); },
       newgroup: () => groupSheet(null, 'city'), newtrip: () => groupSheet(null, 'trip'), gmenu: () => groupMenu(groupById(id)),
       pmenu: () => placeMenu(placeById(id)), delgroup: () => deleteGroupDialog(groupById(id)),
+      date: () => dateSheet({ value: '2026-09-14', sub: 'Кофейня «Зерно»', onPick: () => {} }), date2: () => dateSheet({ sub: 'Кофейня «Зерно»', onPick: () => {} }),
     }[what];
     open?.();
     return;

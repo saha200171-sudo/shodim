@@ -229,3 +229,16 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 /* Длинные ссылки и слова без пробелов переносятся, а не вылезают за край */
 body { overflow-wrap: anywhere; }
 .chip, .badge, .nav .item, .segmented button, .btn { overflow-wrap: normal; }
+
+/* ---------- Календарь ---------- */
+.cal { display: flex; flex-direction: column; gap: 8px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; }
+.cal-nav { width: 36px; height: 36px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; color: var(--ink); }
+.cal-nav:disabled { opacity: .3; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; text-align: center; }
+.cal-wd { font: 700 14px/18px var(--sans); color: var(--muted); padding: 6px 0; }
+.cal-day { height: 40px; border-radius: var(--r-pill); font: 400 16px/24px var(--sans); display: grid; place-items: center; }
+.cal-day.today { box-shadow: inset 0 0 0 1.5px var(--peach); }
+.cal-day.on { background: var(--accent); color: var(--on-accent); font-weight: 700; box-shadow: none; }
+.cal-day:disabled { color: var(--dash); }
+button.input { color: var(--ink); }

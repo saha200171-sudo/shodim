@@ -51,7 +51,8 @@ const I = {
   right: '<path d="M9 5l7 7-7 7"/>',
   down: '<path d="M6 9l6 6 6-6"/>',
   more: '<circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
-  dice: '<rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/>',
+  // два брошенных кубика — понятнее, чем один
+  dice: '<g transform="rotate(-14 7.5 16.5)"><rect x="2.5" y="11.5" width="10" height="10" rx="2.4"/><circle cx="5.4" cy="14.4" r="1.05" fill="currentColor" stroke="none"/><circle cx="9.6" cy="18.6" r="1.05" fill="currentColor" stroke="none"/></g><g transform="rotate(16 16.5 7.5)"><rect x="11.5" y="2.5" width="10" height="10" rx="2.4"/><circle cx="14.2" cy="5.2" r="1.05" fill="currentColor" stroke="none"/><circle cx="16.5" cy="7.5" r="1.05" fill="currentColor" stroke="none"/><circle cx="18.8" cy="9.8" r="1.05" fill="currentColor" stroke="none"/></g>',
   heart: '<path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"/>',
   heartF: '<path fill="currentColor" d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
@@ -551,7 +552,7 @@ function renderGroup(id, q) {
   const st = g.kind === 'trip' ? tripStatus(g) : null;
   app.innerHTML = `<div class="screen">
     <div class="head"><div class="title"><button class="round" data-go="${g.kind === 'trip' ? '#/travel' : '#/'}" aria-label="Назад">${icon('back')}</button><h1 class="h1">${esc(g.name)}</h1></div>
-      <div class="acts"><button class="round peach" data-act="dice" aria-label="Случайное место">${icon('dice')}</button><button class="round" data-act="more" aria-label="Ещё">${icon('more')}</button></div></div>
+      <div class="acts"><button class="round peach" data-act="dice" aria-label="Случайное место">${icon('dice', 26)}</button><button class="round" data-act="more" aria-label="Ещё">${icon('more')}</button></div></div>
     ${st ? `<div class="chips"><span class="chip ${st.cls || ''}">${esc(st.text)}</span></div>` : ''}
     <div class="segmented"><button class="${tab === 'want' ? 'on' : ''}" data-go="#/g/${id}">Хотим · ${want.length}</button><button class="${tab === 'been' ? 'on' : ''}" data-go="#/g/${id}?tab=been">Были · ${been.length}</button></div>
     ${ps.length ? `<label class="input white">${icon('search', 20)}<input type="search" placeholder="Найти место" value="${esc(S.gfilter.q)}" data-search></label>

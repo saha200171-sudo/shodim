@@ -213,3 +213,11 @@ input.input::placeholder, textarea.input::placeholder, .input input::placeholder
 @keyframes up { from { transform: translateY(40px); opacity: .6; } }
 @keyframes pop { from { transform: scale(.96); opacity: 0; } }
 .hidden { display: none !important; }
+
+/* ---------- Пароль и автозаполнение ---------- */
+.eye { color: var(--muted); width: 40px; height: 40px; display: grid; place-items: center; flex: none; border-radius: 50%; }
+.eye:active { background: var(--track); }
+/* Chrome красит автозаполненные поля в голубой — оставляем наш цвет */
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 100px var(--card) inset; -webkit-text-fill-color: var(--ink); caret-color: var(--ink); transition: background-color 9999s;
+}

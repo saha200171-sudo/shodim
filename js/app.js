@@ -70,6 +70,8 @@ const I = {
   move: '<path d="M4 8h12M12 4l4 4-4 4M20 16H8M12 12l-4 4 4 4"/>',
   close: '<path d="M7 7l10 10M17 7L7 17"/>',
   share: '<path d="M12 4v11M8 8l4-4 4 4M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/>',
+  eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
 };
 const icon = (k, size = 22) => `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>`;
 
@@ -370,8 +372,10 @@ function renderLogin() {
     </div>
     <form class="stack-s" data-form>
       <input class="input white" type="email" name="email" placeholder="Почта" autocomplete="email" required value="${esc(L.email)}">
-      <input class="input white" type="password" name="password" placeholder="${L.step === 'signup' ? 'Придумайте пароль (от 6 символов)' : 'Пароль'}" minlength="6" required
-        autocomplete="${L.step === 'signup' ? 'new-password' : 'current-password'}">
+      <label class="input white" style="padding-right:8px">
+        <input type="password" name="password" placeholder="${L.step === 'signup' ? 'Придумайте пароль (от 6 символов)' : 'Пароль'}" minlength="6" required
+          autocomplete="${L.step === 'signup' ? 'new-password' : 'current-password'}">
+        <button type="button" class="eye" data-eye aria-label="Показать пароль">${icon('eye')}</button></label>
       <button class="btn" type="submit">${L.step === 'signup' ? 'Создать аккаунт' : 'Войти'}</button>
       <button class="link-btn" type="button" data-other>${L.step === 'signup' ? 'Уже есть аккаунт? Войти' : 'Впервые здесь? Создать аккаунт'}</button>
     </form>${hillsSVG}</div>`;
@@ -387,6 +391,12 @@ function renderLogin() {
       if (!data.session) throw new Error('confirm-required');
       await setSession(data.session);
     } catch (err) { handleErr(err); btn.disabled = false; }
+  });
+  form.querySelector('[data-eye]').addEventListener('click', e => {
+    const b = e.currentTarget, inp = form.password, show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    b.innerHTML = icon(show ? 'eyeOff' : 'eye');
+    b.setAttribute('aria-label', show ? 'Скрыть пароль' : 'Показать пароль');
   });
   form.querySelector('[data-other]').addEventListener('click', () => {
     L.email = form.email.value.trim();

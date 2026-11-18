@@ -506,7 +506,7 @@ function placeCardHTML(p, tab) {
   const vs = visitsOf(p.id);
   const meta = tab === 'been' && vs.length
     ? `${vs.length} ${plural(vs.length, 'раз', 'раза', 'раз')} · ${fmtDayMonth(vs[0].visited_on)}`
-    : ((p.tags || []).join(' · ') || p.address || '');
+    : ((p.tags || []).join(' · ') || (isUrl(p.address) ? '' : p.address) || '');
   const badge = p.want_again && vs.length ? `<span class="badge">${icon('heartF', 14)}снова</span>` : '';
   return `<button class="pcard" data-pid="${p.id}" data-go="#/p/${p.id}">${photo(placeImg(p), hashKey(p.id), { inner: badge })}
     <span class="col"><span class="t-cards">${esc(p.name)}</span>${meta ? `<span class="t-sub">${esc(meta)}</span>` : ''}</span></button>`;
@@ -602,7 +602,28 @@ function instaInfo(raw) {
   const h = s.replace(/^@/, '');
   return { href: 'https://instagram.com/' + encodeURIComponent(h), label: '@' + h };
 }
+// В поле «Адрес» могут вставить ссылку на карту — тогда показываем её коротко и открываем как есть
+const isUrl = s => /^https?:\/\//i.test((s || '').trim());
+function mapLabel(s) {
+  let h = ''; try { h = new URL(s.trim()).hostname; } catch { /* не ссылка */ }
+  if (/yandex|ya\.ru/.test(h)) return 'Яндекс Карты';
+  if (/google|goo\.gl/.test(h)) return 'Google Карты';
+  if (/2gis/.test(h)) return '2ГИС';
+  return 'Открыть на карте';
+}
+// Координаты из ссылки Яндекс/Google Карт — пригодятся для карты мест
+function parseCoords(s) {
+  try {
+    const u = new URL(s.trim());
+    const pt = u.searchParams.get('poi[point]') || u.searchParams.get('pt') || u.searchParams.get('ll'); // Яндекс: «долгота,широта»
+    if (pt) { const [lng, lat] = pt.split(',').map(Number); if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng }; }
+    const m = s.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) || s.match(/[?&](?:q|query)=(-?\d+\.\d+),(-?\d+\.\d+)/); // Google: «широта,долгота»
+    if (m) return { lat: +m[1], lng: +m[2] };
+  } catch { /* не ссылка */ }
+  return null;
+}
 function mapHref(p) {
+  if (isUrl(p.address)) return p.address.trim();
   if (p.lat != null && p.lng != null) return `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
   const g = groupById(p.group_id);
   const qtxt = p.address + (g && g.kind === 'city' ? ', ' + g.name : '');
@@ -625,7 +646,7 @@ function renderPlace(id) {
       ${ig || p.address ? `<div class="card info">
         ${ig ? `<a class="irow" href="${esc(ig.href)}" target="_blank" rel="noopener"><span class="bubble" style="background:var(--rose)">${icon('insta', 20)}</span><span class="col grow"><span class="t-sub">Instagram</span><span class="t-bold">${esc(ig.label)}</span></span><span class="ext">${icon('ext', 20)}</span></a>` : ''}
         ${ig && p.address ? '<hr>' : ''}
-        ${p.address ? `<a class="irow" href="${esc(mapHref(p))}" target="_blank" rel="noopener"><span class="bubble" style="background:var(--sage)">${icon('pin', 20)}</span><span class="col grow"><span class="t-sub">Адрес</span><span class="t-bold">${esc(p.address)}</span></span><span class="ext">${icon('ext', 20)}</span></a>` : ''}
+        ${p.address ? `<a class="irow" href="${esc(mapHref(p))}" target="_blank" rel="noopener"><span class="bubble" style="background:var(--sage)">${icon('pin', 20)}</span><span class="col grow"><span class="t-sub">${isUrl(p.address) ? 'Карта' : 'Адрес'}</span><span class="t-bold">${esc(isUrl(p.address) ? mapLabel(p.address) : p.address)}</span></span><span class="ext">${icon('ext', 20)}</span></a>` : ''}
       </div>` : ''}
       ${p.note ? `<div class="note"><div class="hand-m">заметка</div><div class="t-body">${esc(p.note)}</div></div>` : ''}
       <div class="row" style="gap:8px"><h2 class="t-sec">Наши визиты</h2>${vs.length ? `<span class="t-sec muted">${vs.length}</span>` : ''}</div>
@@ -670,7 +691,7 @@ function renderForm(id, q) {
     <div class="field"><label>Группа</label><label class="input"><select data-f="group_id">${groupOptions()}</select>${icon('down', 20)}</label></div>
     <div class="field"><span class="label">Теги</span><div class="chips" data-tags></div></div>
     <div class="field"><label>Instagram</label><label class="input">${icon('insta', 20)}<input data-f="instagram" placeholder="@place или ссылка" value="${esc(F.instagram)}" autocapitalize="off"></label></div>
-    <div class="field"><label>Адрес</label><label class="input">${icon('pin', 20)}<input data-f="address" placeholder="Улица, дом" value="${esc(F.address)}"></label></div>
+    <div class="field"><label>Адрес</label><label class="input">${icon('pin', 20)}<input data-f="address" placeholder="Улица, дом или ссылка на карту" value="${esc(F.address)}"></label></div>
     <div class="field"><label>Заметка</label><textarea class="input" data-f="note" rows="3" placeholder="Что там интересного, когда лучше идти…">${esc(F.note)}</textarea></div>
   </div><div class="fade"></div><button class="btn cta" data-act="save">${p ? 'Сохранить' : 'Добавить место'}</button>`;
   on('[data-f]', 'input', (e, el) => { F[el.dataset.f] = el.value; });
@@ -707,6 +728,7 @@ function renderForm(id, q) {
     btn.disabled = true; btn.textContent = 'Сохраняем…';
     try {
       const row = { name: F.name.trim(), group_id: F.group_id, tags: F.tags, instagram: F.instagram.trim() || null, address: F.address.trim() || null, note: F.note.trim() || null };
+      if (!p || row.address !== (p.address || null)) { const c = isUrl(row.address) ? parseCoords(row.address) : null; row.lat = c?.lat ?? null; row.lng = c?.lng ?? null; }
       const oldCover = p?.cover_path;
       if (F.coverFile) row.cover_path = await uploadPhoto(F.coverFile);
       else if (F.coverRemoved) row.cover_path = null;
@@ -1031,7 +1053,7 @@ function seedDemo() {
     P('p1', 'g1', 'Кофейня «Зерно»', ['кафе'], { instagram: '@zerno.coffee', address: 'ул. Зыбицкая, 6', note: 'Говорят, тут лучшие круассаны в городе. Идти утром в выходные!', want_again: true }),
     P('p2', 'g1', 'Выставка керамики', ['выставки'], { note: 'До 30 ноября' }),
     P('p3', 'g1', 'Ботанический сад', ['природа']),
-    P('p4', 'g1', 'Бар «Лампа»', ['на выходные']),
+    P('p4', 'g1', 'Бар «Лампа»', ['на выходные'], { instagram: 'https://www.instagram.com/some.very.long.place.name.minsk/', address: 'https://yandex.by/maps/157/minsk/?ll=27.553463%2C53.897114&mode=poi&poi%5Bpoint%5D=27.553399%2C53.897201&poi%5Buri%5D=ymapsbm1%3A%2F%2Forg%3Foid%3D123', note: 'Оченьдлинноесловобезпробеловкотороенедолжновылезатьзакрайэкрана' }),
     P('p5', 'g2', 'Пекарня у вокзала', ['кафе']),
     P('p6', 'g2', 'Крыша на закате', ['природа']),
     P('p7', 'g3', 'Колизей', ['музеи']),

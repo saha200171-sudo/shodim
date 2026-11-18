@@ -224,3 +224,7 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 
 /* Вход и первый запуск: форма сразу под приветствием, весь блок по центру экрана */
 .welcome.compact { justify-content: center; gap: 40px; padding-top: calc(48px + env(safe-area-inset-top)); padding-bottom: calc(clamp(150px, 12vw, 200px) + env(safe-area-inset-bottom)); }
+
+/* Длинные ссылки и слова без пробелов переносятся, а не вылезают за край */
+body { overflow-wrap: anywhere; }
+.chip, .badge, .nav .item, .segmented button, .btn { overflow-wrap: normal; }

@@ -1073,8 +1073,8 @@ function visitSheet(p, v) {
         <label class="addtile">${icon('camera', 24)}добавить<input type="file" accept="image/*" multiple hidden data-file></label></div></div>
       <div class="field"><label>Пара слов</label><textarea class="input" data-note rows="3" placeholder="Как всё прошло?">${esc(V.note)}</textarea></div>
       <button class="row" data-want style="text-align:left"><span style="color:var(--accent)">${icon('heartF')}</span><span class="t-bold grow">Хотим сюда снова</span><span class="switch ${V.want ? 'on' : ''}"></span></button>
-      <button class="btn" data-save>${v ? 'Сохранить' : 'Сохранить в альбом'}</button>
-      ${v ? `<button class="link-btn danger" data-delete>Удалить визит</button>` : ''}`;
+      <div class="col" style="gap:4px"><button class="btn" data-save>${v ? 'Сохранить' : 'Сохранить в альбом'}</button>
+      ${v ? `<button class="link-btn danger" data-delete style="padding:8px">Удалить визит</button>` : ''}</div>`;
     body.querySelector('[data-pick]').onclick = () => dateSheet({ value: V.date, sub: p.name, onPick: d => { V.date = d; draw(); } });
     body.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { V.date = shiftDays(+b.dataset.day); draw(); });
     body.querySelector('[data-note]').addEventListener('input', e => { V.note = e.target.value; });

@@ -17,8 +17,19 @@
   <main id="app" class="app"><div class="boot">Сходим?</div></main>
   <script type="module" src="js/app.js"></script>
   <script>
+    // Автообновление: при каждом открытии/разворачивании проверяем новую версию,
+    // а когда она установилась — перезагружаемся в неё.
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
-      navigator.serviceWorker.register('sw.js');
+      const hadController = !!navigator.serviceWorker.controller;
+      let reloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || reloading) return;
+        if (document.querySelector('.overlay')) return; // не сбиваем открытую шторку — обновимся при следующем открытии
+        reloading = true; location.reload();
+      });
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update(); });
+      });
     }
   </script>
 </body>

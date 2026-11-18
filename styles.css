@@ -221,3 +221,6 @@ input.input::placeholder, textarea.input::placeholder, .input input::placeholder
 input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0 100px var(--card) inset; -webkit-text-fill-color: var(--ink); caret-color: var(--ink); transition: background-color 9999s;
 }
+
+/* Вход и первый запуск: форма сразу под приветствием, весь блок по центру экрана */
+.welcome.compact { justify-content: center; gap: 40px; padding-top: calc(48px + env(safe-area-inset-top)); padding-bottom: calc(150px + env(safe-area-inset-bottom)); }

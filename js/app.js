@@ -364,7 +364,7 @@ const hillsSVG = `<svg class="hills" viewBox="0 0 360 140" preserveAspectRatio="
 
 function renderLogin() {
   const L = S.login;
-  app.innerHTML = `<div class="welcome">
+  app.innerHTML = `<div class="welcome compact">
     <div class="stack-m center">
       <img class="appicon" src="icons/icon-512.png" alt="">
       <div class="col" style="gap:4px;padding-top:8px"><span class="hand-m accent">привет!</span><h1 class="h1">Сходим?</h1>
@@ -409,7 +409,7 @@ function renderOnboarding() {
   const pending = localStorage.getItem('shodim-join');
   if (pending && O.mode === 'create' && !O.touched) O.mode = 'join';
   const name = localStorage.getItem('shodim-name') || '';
-  app.innerHTML = `<div class="welcome">
+  app.innerHTML = `<div class="welcome compact">
     <div class="stack-m center">
       <img class="appicon" src="icons/icon-512.png" alt="">
       <div class="col" style="gap:4px;padding-top:8px"><span class="hand-m accent">${O.mode === 'join' ? 'вас уже ждут' : 'добро пожаловать'}</span>

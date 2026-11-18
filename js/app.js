@@ -683,7 +683,11 @@ function renderPlace(id) {
   });
   on('[data-act=more]', 'click', () => placeMenu(p));
   on('[data-act=visit]', 'click', () => visitSheet(p, null));
-  on('[data-vid]', 'click', (e, el) => visitSheet(p, S.visits.find(v => v.id === el.dataset.vid)));
+  on('[data-vid]', 'click', (e, el) => {
+    if (el.dataset.lp === '1') { delete el.dataset.lp; return; } // это было долгое нажатие
+    visitSheet(p, S.visits.find(v => v.id === el.dataset.vid));
+  });
+  app.querySelectorAll('[data-vid]').forEach(el => longPress(el, done => visitMenu(p, S.visits.find(v => v.id === el.dataset.vid), done)));
 }
 
 // =========================================================
@@ -971,6 +975,25 @@ function deleteGroupDialog(g) {
   draw();
 }
 
+// ----- Визит: меню по долгому нажатию и удаление
+function visitMenu(p, v, done) {
+  const n = photosOf(v.id).length;
+  const { el, close } = openSheet(`<div class="stack-xs"><h2 class="h2">${fmtDate(v.visited_on)}</h2><span class="t-sub">${esc(p.name)}${n ? ` · ${n} ${plural(n, 'фото', 'фото', 'фото')}` : ''}</span></div>
+    ${actionsHTML([['edit', 'pencil', 'Изменить визит'], ['del', 'trash', 'Удалить визит', true]])}`, { onClose: done });
+  el.querySelector('[data-a=edit]').onclick = () => { close(); visitSheet(p, v); };
+  el.querySelector('[data-a=del]').onclick = () => { close(); confirmDeleteVisit(p, v); };
+}
+async function confirmDeleteVisit(p, v) {
+  const last = visitsOf(p.id).length === 1;
+  const text = `${fmtDate(v.visited_on)} — вместе с фото этого визита.` + (last ? ' Это единственный визит, поэтому место вернётся в «Хотим».' : '');
+  if (!(await confirmDialog('Удалить визит?', text))) return;
+  try {
+    await deleteVisit(v);
+    toast(last ? 'Визит удалён — место вернулось в «Хотим»' : 'Визит удалён');
+    render();
+  } catch (err) { handleErr(err); }
+}
+
 // ----- Меню места
 function placeMenu(p, done) {
   const g = groupById(p.group_id);
@@ -1086,11 +1109,7 @@ function visitSheet(p, v) {
         close(); render(); toast(v ? 'Сохранено' : 'Визит в альбоме 💛');
       } catch (err) { handleErr(err); btn.disabled = false; btn.textContent = 'Сохранить'; }
     };
-    body.querySelector('[data-delete]')?.addEventListener('click', async () => {
-      close();
-      if (!(await confirmDialog('Удалить визит?', `${fmtDate(v.visited_on)} — вместе с фото этого визита.`))) return;
-      try { await deleteVisit(v); toast('Визит удалён'); render(); } catch (err) { handleErr(err); }
-    });
+    body.querySelector('[data-delete]')?.addEventListener('click', () => { close(); confirmDeleteVisit(p, v); });
   };
   draw();
 }
@@ -1141,6 +1160,7 @@ function seedDemo() {
       visit: () => visitSheet(placeById(id), null), editvisit: () => { const v = S.visits.find(x => x.id === id); visitSheet(placeById(v.place_id), v); },
       newgroup: () => groupSheet(null, 'city'), newtrip: () => groupSheet(null, 'trip'), gmenu: () => groupMenu(groupById(id)),
       pmenu: () => placeMenu(placeById(id)), delgroup: () => deleteGroupDialog(groupById(id)),
+      vmenu: () => { const v = S.visits.find(x => x.id === id); visitMenu(placeById(v.place_id), v); },
       date: () => dateSheet({ value: '2026-09-14', sub: 'Кофейня «Зерно»', onPick: () => {} }), date2: () => dateSheet({ sub: 'Кофейня «Зерно»', onPick: () => {} }),
     }[what];
     open?.();

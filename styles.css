@@ -242,3 +242,5 @@ body { overflow-wrap: anywhere; }
 .cal-day.on { background: var(--accent); color: var(--on-accent); font-weight: 700; box-shadow: none; }
 .cal-day:disabled { color: var(--dash); }
 button.input { color: var(--ink); }
+.visit.pressed { transform: scale(1.02); box-shadow: var(--shadow-lift); transition: transform .15s; }
+.visit { user-select: none; -webkit-user-select: none; }

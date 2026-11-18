@@ -105,7 +105,9 @@ function toast(msg) {
 }
 function handleErr(e) {
   console.error(e);
-  const m = String(e?.message || e);
+  const m = e instanceof Event ? 'photo-unreadable' : String(e?.message || e);
+  if (/photo-unreadable/.test(m)) return toast('Это фото не открывается — возможно, формат HEIC. Попробуйте другое фото или скриншот этого');
+  if (/mime type|not supported|payload too large|exceeded the maximum/i.test(m)) return toast('Фото не подошло по формату или размеру — попробуйте другое');
   if (/rate limit|security purposes/i.test(m)) return toast('Слишком часто. Подождите минуту и попробуйте снова');
   if (/invite code not found/i.test(m)) return toast('Такой код не найден — проверьте буквы и цифры');
   if (/space is full/i.test(m)) return toast('В этом списке уже двое — третьему туда нельзя');
@@ -119,17 +121,33 @@ function handleErr(e) {
 }
 
 // Сжатие фото перед загрузкой: до 1600 px по длинной стороне, JPEG ~80%
+// Если браузер не может прочитать фото (например, HEIC) — понятная ошибка;
+// если прочитать может, но сжать не вышло — загружаем оригинал (JPEG/PNG/WebP до 10 МБ).
+const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 async function compress(file, max = 1600, q = 0.82) {
   let src;
   try { src = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
   catch {
-    src = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file); });
+    try {
+      src = await new Promise((res, rej) => {
+        const im = new Image(); im.onload = () => res(im);
+        im.onerror = () => rej(new Error('photo-unreadable')); im.src = URL.createObjectURL(file);
+      });
+    } catch (e) {
+      if (OK_TYPES.includes(file.type) && file.size <= 10 * 1024 * 1024) return file;
+      throw e;
+    }
   }
-  const k = Math.min(1, max / Math.max(src.width, src.height));
-  const c = document.createElement('canvas');
-  c.width = Math.round(src.width * k); c.height = Math.round(src.height * k);
-  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
-  return new Promise(res => c.toBlob(res, 'image/jpeg', q));
+  try {
+    const k = Math.min(1, max / Math.max(src.width, src.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(src.width * k); c.height = Math.round(src.height * k);
+    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', q));
+    if (blob) return blob;
+  } catch { /* не хватило памяти и т.п. */ }
+  if (OK_TYPES.includes(file.type) && file.size <= 10 * 1024 * 1024) return file;
+  throw new Error('photo-unreadable');
 }
 
 // =========================================================
@@ -526,7 +544,10 @@ function renderGroup(id, q) {
   const tab = q.get('tab') === 'been' ? 'been' : 'want';
   const ps = placesIn(id);
   const want = ps.filter(isWant), been = ps.filter(isBeen).sort((a, b) => lastVisit(b).localeCompare(lastVisit(a)));
-  const tags = [...new Set(ps.flatMap(p => p.tags || []))];
+  const list = tab === 'want' ? want : been;
+  // теги — только тех мест, что есть в открытой вкладке
+  const tags = [...new Set(list.flatMap(p => p.tags || []))];
+  if (S.gfilter.tag && !tags.includes(S.gfilter.tag)) S.gfilter.tag = null;
   const st = g.kind === 'trip' ? tripStatus(g) : null;
   app.innerHTML = `<div class="screen">
     <div class="head"><div class="title"><button class="round" data-go="${g.kind === 'trip' ? '#/travel' : '#/'}" aria-label="Назад">${icon('back')}</button><h1 class="h1">${esc(g.name)}</h1></div>
@@ -537,7 +558,6 @@ function renderGroup(id, q) {
       ${tags.length ? `<div class="chips" data-tags></div>` : ''}` : ''}
     <div data-list></div></div>${navHTML('p')}`;
   bindCommon();
-  const list = tab === 'want' ? want : been;
   const drawTags = () => {
     const box = $('[data-tags]'); if (!box) return;
     box.innerHTML = [`<button class="chip ${!S.gfilter.tag ? 'active' : ''}" data-tag="">Все</button>`, ...tags.map(t => `<button class="chip ${S.gfilter.tag === t ? 'active' : ''}" data-tag="${esc(t)}">${esc(t)}</button>`)].join('');
@@ -999,20 +1019,29 @@ function visitSheet(p, v) {
     body.querySelector('[data-note]').addEventListener('input', e => { V.note = e.target.value; });
     body.querySelector('[data-want]').onclick = () => { V.want = !V.want; draw(); };
     body.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { const f = V.keep.find(x => x.id === b.dataset.rm); V.keep = V.keep.filter(x => x !== f); V.removed.push(f); draw(); });
-    body.querySelectorAll('[data-rmnew]').forEach(b => b.onclick = () => { V.added.splice(+b.dataset.rmnew, 1); draw(); });
+    body.querySelectorAll('[data-rmnew]').forEach(b => b.onclick = () => {
+      const [a] = V.added.splice(+b.dataset.rmnew, 1);
+      if (a?.row) V.removed.push(a.row); else if (a?.path) removeFiles([a.path]); // уже сохранённое после частичной ошибки — тоже убрать
+      draw();
+    });
     body.querySelector('[data-file]').addEventListener('change', e => { for (const f of e.target.files) V.added.push({ file: f, url: URL.createObjectURL(f) }); draw(); });
     body.querySelector('[data-save]').onclick = async e => {
       const btn = e.currentTarget; btn.disabled = true; btn.textContent = V.added.length ? 'Загружаем фото…' : 'Сохраняем…';
       try {
-        let visit = v;
-        if (v) await upd('visits', v.id, { visited_on: V.date, note: V.note.trim() || null });
-        else visit = await ins('visits', { place_id: p.id, visited_on: V.date, note: V.note.trim() || null });
+        // 1) сначала загружаем новые фото — если не вышло, визит не создаётся
+        for (const a of V.added) if (!a.path) a.path = await uploadPhoto(a.file);
+        // 2) визит: при повторном нажатии после ошибки — обновляем уже созданный, а не плодим новые
+        let visit = v || V.created;
+        const fields = { visited_on: V.date, note: V.note.trim() || null };
+        if (visit) await upd('visits', visit.id, fields);
+        else visit = V.created = await ins('visits', { place_id: p.id, ...fields });
+        // 3) убранные и новые фото
         for (const f of V.removed) await del('visit_photos', f.id);
-        await removeFiles(V.removed.map(f => f.path));
+        await removeFiles(V.removed.map(f => f.path)); V.removed = [];
         let order = V.keep.length;
         for (const a of V.added) {
-          const path = await uploadPhoto(a.file);
-          await ins('visit_photos', { visit_id: visit.id, path, sort_order: order++ });
+          if (!a.row) a.row = await ins('visit_photos', { visit_id: visit.id, path: a.path, sort_order: order });
+          order++;
         }
         if (V.want !== !!p.want_again) await upd('places', p.id, { want_again: V.want });
         await signUrls();

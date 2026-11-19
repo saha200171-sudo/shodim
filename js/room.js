@@ -53,7 +53,7 @@ export const ITEMS = [
   I('bookshelf', 'Полка с книгами', 'wallR', [252, 80, 88, 47.5], 21, { price: 6, cat: 'walls', tile: 'lav', note: 'книги и цветочек' }),
   I('painting', 'Картина', 'wallR', [258, 66, 76, 62], 21, { trophy: 'art5', cat: 'walls', tile: 'butter' }),
   // --- окно
-  I('curtains', 'Шторы', 'curtains', [104, 34, 152, 130], 12, { price: 4, cat: 'window', tile: 'sky', note: 'розовые' }),
+  I('curtains', 'Шторы', 'curtains', [104, 34, 152, 130], 13, { price: 4, cat: 'window', tile: 'sky', note: 'розовые' }),
   I('globe', 'Глобус', 'sill', [190.9, 115, 26.9, 32.5], 14, { trophy: 'trip1', cat: 'window', tile: 'butter' }),
   I('cactus', 'Кактус', 'sill', [191.5, 114, 26, 34], 14, { price: 3, cat: 'window', tile: 'lav', note: 'на подоконник' }),
   I('balloon', 'Воздушный шар', 'balloon', [141.5, 63, 29, 47], 11, { trophy: 'extreme5', cat: 'window', tile: 'sky', note: 'летает за окном' }),

@@ -1366,6 +1366,7 @@ function sceneHTML({ have, placed, dream = false, ws = wsNow() }) {
   return `<div class="scene t-${time}"><span class="snap" style="left:0"></span><span class="snap" style="left:50%"></span>
     <img class="l" src="room/bg.svg" alt="" style="${boxStyle([0, 0, 720, 330])};z-index:0">
     <img class="l win" src="room/win-${ws.season}-${time}.svg" alt="" style="${boxStyle(WIN_BOX)};z-index:10">
+    <img class="l win" src="room/winf-${ws.season}-${time}.svg" alt="" style="${boxStyle(WIN_BOX)};z-index:12">
     <img class="l" src="room/screen.svg" alt="" style="${boxStyle(SCREEN_BOX)};z-index:22">
     ${all.map(layer).join('')}${glows}${locks}
   </div>`;

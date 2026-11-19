@@ -46,35 +46,35 @@ const I = (id, name, slot, box, z, extra) => ({ id, name, slot, box, z, art: `ro
 export const ITEMS = [
   // --- потолок
   I('garland', 'Гирлянда', 'ceil', [7.7, 7.9, 344.4, 44.2], 30, { price: 6, cat: 'ceil', tile: 'butter', note: 'лампочки на проводе над окном' }),
-  I('lanterns', 'Бумажные фонарики', 'ceil2', [365, 0, 309, 77], 31, { price: 8, cat: 'ceil', tile: 'rose', note: 'над кинозоной' }),
+  I('lanterns', 'Бумажные фонарики', 'ceil2', [365, 0, 309, 77], 31, { price: 8, cat: 'ceil', tile: 'lav', note: 'над кинозоной' }),
   // --- стены
   I('photowall', 'Фотостена', 'wallL', [23.3, 52.1, 89, 111], 20, { price: 5, cat: 'walls', tile: 'peach', note: 'полароиды на скотче' }),
   I('clock', 'Часы', 'wallL', [36, 66, 60, 60], 20, { price: 3, cat: 'walls', tile: 'lav' }),
-  I('bookshelf', 'Полка с книгами', 'wallR', [252, 80, 88, 47.5], 21, { price: 6, cat: 'walls', tile: 'sage', note: 'книги и цветочек' }),
+  I('bookshelf', 'Полка с книгами', 'wallR', [252, 80, 88, 47.5], 21, { price: 6, cat: 'walls', tile: 'lav', note: 'книги и цветочек' }),
   I('painting', 'Картина', 'wallR', [258, 66, 76, 62], 21, { trophy: 'art5', cat: 'walls', tile: 'butter' }),
   // --- окно
-  I('curtains', 'Шторы', 'curtains', [104, 34, 152, 130], 12, { price: 4, cat: 'window', tile: 'rose', note: 'розовые' }),
-  I('globe', 'Глобус', 'sill', [190.9, 115, 26.9, 32.5], 14, { trophy: 'trip1', cat: 'window', tile: 'sky' }),
-  I('cactus', 'Кактус', 'sill', [191.5, 114, 26, 34], 14, { price: 3, cat: 'window', tile: 'sage', note: 'на подоконник' }),
+  I('curtains', 'Шторы', 'curtains', [104, 34, 152, 130], 12, { price: 4, cat: 'window', tile: 'sky', note: 'розовые' }),
+  I('globe', 'Глобус', 'sill', [190.9, 115, 26.9, 32.5], 14, { trophy: 'trip1', cat: 'window', tile: 'butter' }),
+  I('cactus', 'Кактус', 'sill', [191.5, 114, 26, 34], 14, { price: 3, cat: 'window', tile: 'lav', note: 'на подоконник' }),
   I('balloon', 'Воздушный шар', 'balloon', [141.5, 63, 29, 47], 11, { trophy: 'extreme5', cat: 'window', tile: 'sky', note: 'летает за окном' }),
   // --- уютный угол (левая половина)
-  I('armchair', 'Кресло', 'floorL', [18, 178, 118, 104], 50, { price: 5, cat: 'floor', tile: 'sage', note: 'мятное, с подушкой' }),
-  I('sofa', 'Диванчик', 'floorL', [14, 203, 124, 77.5], 50, { price: 8, cat: 'floor', tile: 'sky', note: 'вместо кресла' }),
-  I('pouf', 'Пуфик', 'floorL', [46, 230, 60, 51], 50, { price: 3, cat: 'floor', tile: 'rose' }),
-  I('rug', 'Круглый ковёр', 'rugL', [98, 286, 164, 36], 40, { price: 4, cat: 'floor', tile: 'peach', note: 'розовый' }),
+  I('armchair', 'Кресло', 'floorL', [18, 178, 118, 104], 50, { price: 5, cat: 'floor', tile: 'peach', note: 'мятное, с подушкой' }),
+  I('sofa', 'Диванчик', 'floorL', [14, 203, 124, 77.5], 50, { price: 8, cat: 'floor', tile: 'butter', note: 'вместо кресла' }),
+  I('pouf', 'Пуфик', 'floorL', [46, 230, 60, 51], 50, { price: 3, cat: 'floor', tile: 'sage' }),
+  I('rug', 'Круглый ковёр', 'rugL', [98, 286, 164, 36], 40, { price: 4, cat: 'floor', tile: 'sky', note: 'розовый' }),
   I('table', 'Столик', 'table', [140, 228.7, 80, 69.3], 52, { price: 5, cat: 'floor', tile: 'butter', note: 'с двумя айс-латте' }),
   I('monstera', 'Монстера', 'floorR', [260.8, 173, 88.5, 123], 51, { price: 4, cat: 'floor', tile: 'butter' }),
-  I('torch', 'Торшер', 'floorR', [268, 176, 76, 119], 51, { price: 4, cat: 'floor', tile: 'sky' }),
+  I('torch', 'Торшер', 'floorR', [268, 176, 76, 119], 51, { price: 4, cat: 'floor', tile: 'peach' }),
   I('cat', 'Кот', 'pet', [232, 258, 43.2, 49], 60, { trophy: 'fifty', cat: 'floor', tile: 'lav', note: 'живёт в комнате' }),
   // --- кинозона (правая половина)
-  I('film', 'Проектор', 'film', [398, 80, 136, 74], 23, { trophy: 'cinema10', cat: 'cinema', tile: 'peach', note: 'включает плёнку на экране' }),
-  I('bluerug', 'Синий ковёр', 'rugR', [352, 292, 236, 26], 41, { price: 4, cat: 'cinema', tile: 'sky', note: 'под креслами-мешками' }),
-  I('beanbags', 'Кресла-мешки', 'bags', [362.1, 230.7, 215.4, 69.3], 55, { price: 10, cat: 'cinema', tile: 'rose', note: 'розовое и жёлтое' }),
-  I('popcorn', 'Попкорн', 'popcorn', [453.5, 248.5, 33, 53.6], 56, { trophy: 'cinema20', cat: 'cinema', tile: 'butter' }),
-  I('skate', 'Скейт и шлем', 'skate', [554.4, 74, 106.4, 115.3], 24, { trophy: 'adrenaline', cat: 'cinema', tile: 'sky' }),
-  I('shelving', 'Стеллаж', 'shelving', [654, 150, 60, 150], 45, { price: 12, cat: 'cinema', tile: 'peach', note: 'полки для трофеев' }),
-  I('goldcup', 'Золотой стаканчик', 'goldcup', [660, 97.7, 44, 52.3], 46, { trophy: 'coffee50', cat: 'cinema', tile: 'butter', note: 'на стеллаже' }),
-  I('cart', 'Кофейная тележка', 'cart', [598, 196, 46, 104], 47, { trophy: 'coffee30', cat: 'cinema', tile: 'sage', note: 'у стеллажа' }),
+  I('film', 'Проектор', 'film', [398, 80, 136, 74], 23, { trophy: 'cinema10', cat: 'cinema', tile: 'lav', note: 'включает плёнку на экране' }),
+  I('bluerug', 'Синий ковёр', 'rugR', [352, 292, 236, 26], 41, { price: 4, cat: 'cinema', tile: 'peach', note: 'под креслами-мешками' }),
+  I('beanbags', 'Кресла-мешки', 'bags', [362.1, 230.7, 215.4, 69.3], 55, { price: 10, cat: 'cinema', tile: 'sky', note: 'розовое и жёлтое' }),
+  I('popcorn', 'Попкорн', 'popcorn', [453.5, 248.5, 33, 53.6], 56, { trophy: 'cinema20', cat: 'cinema', tile: 'sky' }),
+  I('skate', 'Скейт и шлем', 'skate', [554.4, 74, 106.4, 115.3], 24, { trophy: 'adrenaline', cat: 'cinema', tile: 'peach' }),
+  I('shelving', 'Стеллаж', 'shelving', [654, 150, 60, 150], 45, { price: 12, cat: 'cinema', tile: 'sage', note: 'полки для трофеев' }),
+  I('goldcup', 'Золотой стаканчик', 'goldcup', [660, 97.7, 44, 52.3], 46, { trophy: 'coffee50', cat: 'cinema', tile: 'lav', note: 'на стеллаже' }),
+  I('cart', 'Кофейная тележка', 'cart', [598, 196, 46, 104], 47, { trophy: 'coffee30', cat: 'cinema', tile: 'peach', note: 'у стеллажа' }),
 ];
 export const itemById = id => ITEMS.find(i => i.id === id);
 export const SHOP = ITEMS.filter(i => i.price);

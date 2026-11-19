@@ -776,13 +776,20 @@ function renderForm(id, q) {
 // =========================================================
 const TAPES = ['--butter', '--rose', '--sage', '--sky'];
 const TILT = [-3, 2.5, -2, 3.5];
-function polaroidHTML(v, i) {
+// Один полароид = одно фото. У всех фото одного визита — скотч одного цвета.
+function polaroidHTML({ v, src, tape }, i) {
   const p = placeById(v.place_id);
   const name = p?.name || '';
   const short = name.match(/[«"]([^»"]+)[»"]/)?.[1] || name; // «Зерно» вместо «Кофейня «Зерно»»
   return `<button class="polaroid" data-go="#/p/${v.place_id}" style="transform:rotate(${TILT[i % 4]}deg)">
-    <span class="tape" style="background:var(${TAPES[i % 4]})"></span>
-    ${photo(visitImg(v), hashKey(v.id))}<span class="hand-s"><span class="nm">${esc(short)}</span>, ${fmtShort(v.visited_on)}</span></button>`;
+    <span class="tape" style="background:var(${TAPES[tape % TAPES.length]})"></span>
+    ${photo(src, hashKey(v.id))}<span class="hand-s"><span class="nm">${esc(short)}</span>, ${fmtShort(v.visited_on)}</span></button>`;
+}
+function albumCards(visits) {
+  return visits.flatMap((v, vi) => {
+    const fs = photosOf(v.id);
+    return fs.length ? fs.map(f => ({ v, src: url(f.path), tape: vi })) : [{ v, src: visitImg(v), tape: vi }];
+  });
 }
 function renderAlbum(q) {
   S.ctxGroup = null;
@@ -808,7 +815,7 @@ function renderAlbum(q) {
         <button class="btn" data-go="#/">К нашим местам</button></div>`
       : !vs.length ? `<p class="t-sub center" style="margin:24px 0">Здесь пока нет визитов</p>`
       : months.map(m => `<div class="month"><div class="mh"><span class="hand-l">${fmtMonth(m.k)}</span><span class="t-sub">${m.items.length} ${plural(m.items.length, 'визит', 'визита', 'визитов')}</span></div>
-          <div class="board">${m.items.map(polaroidHTML).join('')}</div></div>`).join('')}
+          <div class="board">${albumCards(m.items).map(polaroidHTML).join('')}</div></div>`).join('')}
   </div>${navHTML('a')}`;
   bindCommon();
 }
@@ -1153,7 +1160,14 @@ function seedDemo() {
   const V = (id, pid, d, note) => ({ id, space_id: 'demo', place_id: pid, visited_on: d, note, created_at: '' });
   S.visits = [V('v1', 'p1', '2026-09-14', 'взяли фисташковый раф'), V('v2', 'p1', '2026-03-02', 'первый раз, сидели у окна'),
     V('v3', 'p3', '2026-11-09', null), V('v4', 'p5', '2026-10-26', 'булочки с корицей!'), V('v5', 'p4', '2026-10-03', null)];
-  S.photos = [];
+  // демо-«фото»: цветные картинки, чтобы было видно несколько фото в одном визите
+  const fake = (id, c1, c2) => {
+    S.urls.set('demo/' + id, 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="${c1}"/><circle cx="200" cy="230" r="110" fill="${c2}"/></svg>`));
+    return 'demo/' + id;
+  };
+  const F = (id, vid, path, n) => ({ id, space_id: 'demo', visit_id: vid, path, sort_order: n });
+  S.photos = [F('f1', 'v3', fake('a', '#CFE0C3', '#8FAE82'), 0), F('f2', 'v3', fake('b', '#E4EEDD', '#B5CBA8'), 1), F('f3', 'v3', fake('c', '#D3E0C9', '#6F8A64'), 2),
+    F('f4', 'v4', fake('d', '#F8E4E5', '#DDAEB2'), 0), F('f5', 'v4', fake('e', '#FBF2D8', '#E5CF8E'), 1)];
 }
 
 (async function init() {

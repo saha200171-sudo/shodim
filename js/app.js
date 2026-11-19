@@ -1718,8 +1718,8 @@ function shopCardHTML(it, R) {
 }
 // Превью в магазине: кусочек нашей комнаты, приближенный к месту, куда встанет вещь
 const PREV_RATIO = 16 / 9;
-function previewCrop(it) {
-  const [x, y, w, h] = it.box;
+function previewCrop(it, box = it.box) {
+  const [x, y, w, h] = box;
   let cw = Math.max(w * 2.4, h * 2 * PREV_RATIO, 330);
   cw = Math.min(cw, 330 * PREV_RATIO, 720);
   const ch = cw / PREV_RATIO;
@@ -1729,7 +1729,8 @@ function previewCrop(it) {
 function previewHTML(it, R, withItem) {
   const have = new Set(R.have), placed = { ...S.room.placed };
   if (withItem) { have.add(it.id); placed[it.slot] = it.id; }
-  const { cx, cy, cw, ch } = previewCrop(it);
+  // приближаем к тому месту, где вещь стоит на самом деле (золотой стаканчик без стеллажа — на полу)
+  const { cx, cy, cw, ch } = previewCrop(it, itemBox(it, arrangement(have, placed)));
   return `<div class="prev-scene" style="width:${(720 / cw * 100).toFixed(3)}%;left:${(-cx / cw * 100).toFixed(3)}%;top:${(-cy / ch * 100).toFixed(3)}%">${sceneHTML({ have, placed, fresh: withItem ? it.id : null })}</div>`;
 }
 function itemSheet(it) {

@@ -73,7 +73,7 @@ export const ITEMS = [
   I('popcorn', 'Попкорн', 'popcorn', [453.5, 248.5, 33, 53.6], 56, { trophy: 'cinema20', cat: 'cinema', tile: 'sky' }),
   I('skate', 'Скейт и шлем', 'skate', [554.4, 74, 106.4, 115.3], 24, { trophy: 'adrenaline', cat: 'cinema', tile: 'peach' }),
   I('shelving', 'Стеллаж', 'shelving', [654, 150, 60, 150], 45, { price: 12, cat: 'cinema', tile: 'sage', note: 'полки для трофеев' }),
-  I('goldcup', 'Золотой стаканчик', 'goldcup', [660, 97.7, 44, 52.3], 46, { trophy: 'coffee50', cat: 'cinema', tile: 'lav', note: 'на стеллаже' }),
+  I('goldcup', 'Золотой стаканчик', 'goldcup', [656, 93.7, 52, 60.3], 46, { trophy: 'coffee50', cat: 'cinema', tile: 'lav', note: 'на стеллаже' }),
   I('cart', 'Кофейная тележка', 'cart', [598, 196, 46, 104], 47, { trophy: 'coffee30', cat: 'cinema', tile: 'peach', note: 'у стеллажа' }),
 ];
 export const itemById = id => ITEMS.find(i => i.id === id);

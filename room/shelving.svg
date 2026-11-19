@@ -1,4 +1,5 @@
 <svg width="60" height="150" viewBox="0 0 60 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+<style>.hand{transform-box:view-box;transform-origin:22px 82px;animation:tick 24s linear infinite}@keyframes tick{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.hand{animation:none}}</style>
 <path d="M56 0H4C1.79086 0 0 1.79086 0 4V146C0 148.209 1.79086 150 4 150H56C58.2091 150 60 148.209 60 146V4C60 1.79086 58.2091 0 56 0Z" fill="#E2C9AD"/>
 <path d="M54 6H6V144H54V6Z" fill="#F3E3D0"/>
 <path d="M6 50H54M6 96H54" stroke-width="4" stroke="#C9A98A"/>
@@ -7,7 +8,7 @@
 <path d="M34 36H50L47 48H37L34 36Z" fill="#F6D3BF"/>
 <path d="M42 37C45.866 37 49 33.866 49 30C49 26.134 45.866 23 42 23C38.134 23 35 26.134 35 30C35 33.866 38.134 37 42 37Z" fill="#9DBF8E"/>
 <path d="M22 91C26.9706 91 31 86.9706 31 82C31 77.0294 26.9706 73 22 73C17.0294 73 13 77.0294 13 82C13 86.9706 17.0294 91 22 91Z" fill="white"/>
-<path d="M22 82L26 77" stroke-width="2" stroke-linecap="round" stroke="#D9826B"/>
+<path d="M22 82L22 77.5" stroke-width="1.6" stroke-linecap="round" stroke="#B89474"/><path class="hand" d="M22 82L26 77" stroke-width="2" stroke-linecap="round" stroke="#D9826B"/><circle cx="22" cy="82" r="1.4" fill="#B89474"/>
 <path d="M48 72H38C36.8954 72 36 72.8954 36 74V92C36 93.1046 36.8954 94 38 94H48C49.1046 94 50 93.1046 50 92V74C50 72.8954 49.1046 72 48 72Z" fill="#CFDDE6"/>
 <path d="M12 112H28L26 142H14L12 112Z" fill="#F0CFD1"/>
 <path d="M20 112C16 102.667 16 95.3333 20 90C24 95.3333 24 102.667 20 112Z" fill="#8FAE82"/>

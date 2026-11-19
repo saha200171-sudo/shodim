@@ -1602,18 +1602,18 @@ function renderRoom() {
   app.innerHTML = `${FILTERS_SVG}<div class="screen">
     <div class="head"><button class="round" data-go="#/" aria-label="Назад">${icon('back')}</button>${cupsPill(R.bal.balance)}</div>
     <div class="col"><span class="hand-m accent">${empty ? 'пока пустовато' : 'уютно у нас'}</span><h1 class="h1">Наша комната</h1></div>
-    <div class="stack-s">
+    <div class="room-layout"><div class="stack-s room-main">
       <div class="scene-vp" data-vp>${sceneHTML({ have: R.have, placed: S.room.placed })}<div class="scene-hot" data-hot></div></div>
       <div class="row between"><div class="row" style="gap:6px" data-dots><span class="dot on"></span><span class="dot"></span><span class="t-sub" style="margin-left:6px" data-hint>листайте →</span></div>
         <button class="pill-btn" data-go="#/room/dream">${icon('sparkle', 16)}Комната мечты</button></div>
-    </div>
+    </div><div class="room-side">
     ${empty ? `<div class="note"><div class="hand-m">как это работает</div><div class="t-body">За походы вместе — достижения и стаканчики: +1 за каждый визит и награды за достижения. На стаканчики покупаются вещи, и комната становится уютнее.</div></div>` : ''}
     ${!S.hasRoom && !S.demo ? `<div class="kind-hint" style="cursor:default">${icon('lock', 18)}<span>Чтобы покупки сохранялись, нужно один раз запустить <b>003_room.sql</b> в Supabase (SQL Editor).</span></div>` : ''}
     <div class="room-tiles">
       <button class="card rtile" data-go="#/room/inv"><span class="bub" style="background:var(--sage)">${icon('box')}</span><span class="t-cards">Инвентарь</span><span class="t-sub">${R.have.size ? `${R.have.size} ${thingsWord(R.have.size)}` : 'пусто'}</span></button>
       <button class="card rtile" data-go="#/room/shop"><span class="bub" style="background:var(--peach)">${icon('bag')}</span><span class="t-cards">Магазин</span><span class="t-sub">${SHOP.length} товаров</span></button>
       <button class="card rtile" data-go="#/room/ach"><span class="bub" style="background:var(--butter)">${icon('star')}</span><span class="t-cards">Достижения</span><span class="t-sub">${R.got.size} из ${ACHIEVEMENTS.length}</span></button>
-    </div>
+    </div></div></div>
     <button class="link-btn" data-go="#/invite" style="align-self:center;font-size:15px">Участники и код приглашения</button>
   </div>${navHTML('r')}`;
   bindCommon();

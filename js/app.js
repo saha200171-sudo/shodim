@@ -600,7 +600,8 @@ function renderTravel() {
       <div class="col"><h1 class="h1">Путешествия</h1><span class="hand-m accent" style="font-size:22px;line-height:24px">мечтаем и планируем</span></div></div></div>
     ${ts.map(t => {
       const st = tripStatus(t), n = placesIn(t.id).length;
-      return `<button class="card trip" data-go="#/g/${t.id}">${photo(url(t.cover_path), t.cover_color || hashKey(t.id), { inner: `<span class="status" style="${st.cls ? `background:var(--${st.cls})` : ''}">${esc(st.text)}</span>` })}
+      return `<button class="card trip" data-tid="${t.id}" data-go="#/g/${t.id}">${photo(url(t.cover_path), t.cover_color || hashKey(t.id), { inner: `<span class="status" style="${st.cls ? `background:var(--${st.cls})` : ''}">${esc(st.text)}</span>
+          <span class="round shadow trip-more" role="button" tabindex="0" data-tmenu="${t.id}" aria-label="Изменить или удалить поездку">${icon('more')}</span>` })}
         <span class="row between" style="padding:0 8px"><span class="t-sec">${esc(t.name)}</span><span class="t-sub">${n} ${plural(n, 'место', 'места', 'мест')}</span></span></button>`;
     }).join('')}
     ${ts.length ? '' : `<p class="t-body muted center" style="margin:16px 0 0">Здесь будут поездки — и те, о которых пока мечтаем, и уже запланированные.</p>`}
@@ -608,6 +609,9 @@ function renderTravel() {
   </div>${navHTML('p')}`;
   bindCommon();
   on('[data-act=new-trip]', 'click', () => groupSheet(null, 'trip'));
+  // меню поездки: кнопка «⋯» на обложке или долгое нажатие на карточку — как у групп на главной
+  on('[data-tmenu]', 'click', (e, el) => { e.stopPropagation(); e.preventDefault(); groupMenu(groupById(el.dataset.tmenu)); });
+  app.querySelectorAll('.trip[data-tid]').forEach(el => longPress(el, done => groupMenu(groupById(el.dataset.tid), done)));
 }
 
 // =========================================================

@@ -244,3 +244,9 @@ body { overflow-wrap: anywhere; }
 button.input { color: var(--ink); }
 .visit.pressed { transform: scale(1.02); box-shadow: var(--shadow-lift); transition: transform .15s; }
 .visit { user-select: none; -webkit-user-select: none; }
+
+/* «⋯» на обложке поездки */
+.trip .trip-more { position: absolute; right: 10px; top: 10px; z-index: 1; width: 40px; height: 40px; }
+.trip.pressed { transform: scale(1.02); box-shadow: var(--shadow-lift); transition: transform .15s; }
+.trip { user-select: none; -webkit-user-select: none; }
+.trip .ph .sun { right: 26%; }

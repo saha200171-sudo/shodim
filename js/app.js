@@ -809,6 +809,23 @@ async function backfillCoords() {
   if (changed && /view=map/.test(location.hash) && !document.querySelector('.overlay')) render();
 }
 
+// На компьютере панель карты слева — точки вписываем в оставшееся место справа
+const wideMap = () => matchMedia('(min-width: 1024px)').matches;
+function mapPadding(topEl, mfEl) {
+  if (wideMap()) { const r = topEl.getBoundingClientRect(); return { paddingTopLeft: [r.width + 60, 50], paddingBottomRight: [60, 50] }; }
+  return { paddingTopLeft: [40, (mfEl || topEl).getBoundingClientRect().bottom + 30], paddingBottomRight: [40, 200] };
+}
+// «N мест без точки» — кнопка со списком этих мест, чтобы сразу добавить адрес
+function noPointHint(box, list) {
+  if (!list.length) { box.innerHTML = ''; return; }
+  const n = list.length;
+  box.innerHTML = `<button class="map-hint row" data-nopt style="width:100%;text-align:left;color:var(--ink)">${icon('pin', 18)}<span class="grow">${n} ${plural(n, 'место', 'места', 'мест')} без точки на карте</span><span class="accent t-bold">какие →</span></button>`;
+  box.querySelector('[data-nopt]').onclick = () => {
+    const { el, close } = openSheet(`<div class="stack-xs"><h2 class="h2">Без точки на карте</h2><span class="t-sub">Откройте место и добавьте адрес или поставьте точку на карте</span></div>
+      <div class="col" style="gap:8px">${list.map(p => `<button class="card visit" data-pe="${p.id}" style="background:var(--paper)">${photo(placeImg(p), hashKey(p.id))}<span class="col grow"><span class="t-bold">${esc(p.name)}</span><span class="t-sub">${esc(groupById(p.group_id)?.name || '')}${p.address ? ' · ' + esc(isUrl(p.address) ? mapLabel(p.address) : p.address) : ' · нет адреса'}</span></span>${icon('pencil', 20)}</button>`).join('')}</div>`);
+    el.querySelectorAll('[data-pe]').forEach(b => b.onclick = () => { close(); go(`#/p/${b.dataset.pe}/edit`); });
+  };
+}
 function renderGroupMap(g, q) {
   const id = g.id, tab = q.get('tab') === 'been' ? 'been' : 'want';
   const ps = placesIn(id);
@@ -843,8 +860,7 @@ function renderGroupMap(g, q) {
       box.innerHTML = `<button class="card map-card" data-go="#/p/${p.id}">${photo(placeImg(p), hashKey(p.id))}<span class="col grow"><span class="t-cards">${esc(p.name)}</span><span class="t-sub">${esc(meta(p))}</span></span>${icon('right', 22)}</button>`;
       bindCommon(box); return;
     }
-    const noPt = filtered().filter(x => x.lat == null).length;
-    box.innerHTML = noPt ? `<div class="map-hint">${noPt} ${plural(noPt, 'место', 'места', 'мест')} без точки на карте — откройте место и добавьте адрес или ссылку на карту</div>` : '';
+    noPointHint(box, filtered().filter(x => x.lat == null));
   };
   const refreshIcon = pid => { const m = markers.get(pid), p = placeById(pid); if (m && p) { m.setIcon(pinIcon(isBeen(p), pid === sel)); m.setZIndexOffset(pid === sel ? 1000 : 0); } };
   const drawPins = async fit => {
@@ -858,8 +874,7 @@ function renderGroupMap(g, q) {
       markers.set(p.id, m); cluster.addLayer(m);
     }
     if (!fit) return;
-    const padTop = top.getBoundingClientRect().bottom + 70;
-    if (pts.length > 1) map.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lng])), { paddingTopLeft: [40, padTop], paddingBottomRight: [40, 200], maxZoom: 16 });
+    if (pts.length > 1) map.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lng])), { ...mapPadding(top, mf), maxZoom: 16 });
     else if (pts.length === 1) map.setView([pts[0].lat, pts[0].lng], 15);
     else { const c = await groupCenter(g); if (map) map.setView([c.lat, c.lng], g.kind === 'trip' ? 5 : 12); }
   };
@@ -936,12 +951,11 @@ function renderAllMap(q) {
       const trip = out.every(x => groupById(x.group_id)?.kind === 'trip');
       box.innerHTML = `<button class="map-hint row" data-showall style="width:100%;text-align:left;color:var(--ink)">${icon('map', 18)}<span class="grow">Ещё ${out.length} ${plural(out.length, 'место', 'места', 'мест')} ${trip ? 'в путешествиях' : 'за краем карты'}</span><span class="accent t-bold">показать →</span></button>`;
       box.querySelector('[data-showall]').onclick = () => { M.g = trip && M.g === 'home' ? 'travel' : 'all'; drawChips(); drawFilter(); drawPins(true); };
-    } else box.innerHTML = noPt ? `<div class="map-hint">${noPt} ${plural(noPt, 'место', 'места', 'мест')} без точки на карте — откройте место и добавьте адрес</div>` : '';
+    } else noPointHint(box, filtered().filter(x => x.lat == null));
   };
   const refreshIcon = pid => { const m = markers.get(pid), p = placeById(pid); if (m && p) { m.setIcon(pinIcon(isBeen(p), pid === sel)); m.setZIndexOffset(pid === sel ? 1000 : 0); } };
   const fitTo = pts => {
-    const padTop = mf.getBoundingClientRect().bottom + 30;
-    if (pts.length > 1) map.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lng])), { paddingTopLeft: [40, padTop], paddingBottomRight: [40, 200], maxZoom: 15 });
+    if (pts.length > 1) map.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lng])), { ...mapPadding(top, mf), maxZoom: 15 });
     else if (pts.length === 1) map.setView([pts[0].lat, pts[0].lng], 14);
     else map.setView([MINSK.lat, MINSK.lng], 11);
   };

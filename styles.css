@@ -517,7 +517,7 @@ button.input { color: var(--ink); }
   .hero .bar { left: max(40px, calc(50% - 380px)); right: max(40px, calc(50% - 380px)); }
   /* шторки — окном по центру */
   .overlay { align-items: center; padding: 24px; }
-  .sheet { max-width: 520px; border-radius: var(--r-sheet); max-height: 88vh; padding: 28px 28px 28px; overscroll-behavior: contain;
+  .sheet { max-width: 520px; border-radius: var(--r-sheet); max-height: 92vh; padding: 24px 28px; overscroll-behavior: contain;
     scrollbar-width: thin; scrollbar-color: var(--dash) transparent; } /* тонкая полоса прокрутки без стрелок, внутри скруглений */
   .sheet::-webkit-scrollbar { width: 8px; }
   .sheet::-webkit-scrollbar-thumb { background: var(--dash); border-radius: 4px; border: 2px solid var(--card); }
@@ -596,4 +596,12 @@ button.input { color: var(--ink); }
   .place-wrap .hero .bar, .app:has(.nav) .place-wrap .hero .bar { left: 16px; right: 16px; top: 16px; }
   .place-wrap .sheetlike { margin: 0; padding: 0; background: none; border-radius: 0; max-width: none; z-index: auto; }
   .place-wrap .cta, .app:has(.nav) .place-wrap .cta { position: static; transform: none; width: auto; align-self: flex-start; padding: 0 36px; margin-top: 4px; }
+}
+
+@media (min-width: 760px) {
+  /* окна на компьютере чуть плотнее, чтобы календарь помещался без прокрутки */
+  .sheet [data-body] { gap: 16px !important; }
+  .cal-day { height: 36px; }
+  .cal-wd { padding: 4px 0; }
+  .cal { gap: 4px; }
 }

@@ -1124,6 +1124,7 @@ function renderInvite() {
     </div>
     <div class="stack-s">
       ${two ? `<button class="btn" data-go="#/">К нашим местам</button>` : `<button class="btn" data-act="share">${icon('share')}Отправить ссылку</button><button class="link-btn" data-go="#/">Пропустить пока</button>`}
+      ${two ? '' : `<button class="link-btn" data-act="switch" style="font-size:15px">Перейти в другой список по коду</button>`}
       <button class="link-btn" data-act="logout" style="font-size:15px">Выйти из аккаунта</button>
     </div>${hillsSVG}</div>`;
   bindCommon();
@@ -1138,6 +1139,34 @@ function renderInvite() {
     if (S.demo) return toast('В демо-режиме выйти нельзя');
     if (await confirmDialog('Выйти из аккаунта?', 'Список и фото останутся — просто войдите снова по почте.', 'Выйти')) sb.auth.signOut();
   });
+  on('[data-act=switch]', 'click', () => switchSpaceSheet());
+}
+
+// Если случайно создали свой список вместо входа по коду — перейти в общий
+function switchSpaceSheet() {
+  const n = S.places.length;
+  const { el, close } = openSheet(`<div class="stack-xs"><h2 class="h2">Перейти в другой список</h2>
+      <p class="t-sub" style="margin:0">Введите код, который вам прислали. Текущий список вы покинете${n ? ` — его ${n} ${plural(n, 'место', 'места', 'мест')} не перенесутся` : ''}.</p></div>
+    <input class="input" data-code placeholder="Например, ZRN-482" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:.1em">
+    <button class="btn" data-go2>Перейти</button>`);
+  const inp = el.querySelector('[data-code]'); inp.focus();
+  el.querySelector('[data-go2]').onclick = async e => {
+    const code = inp.value.trim();
+    if (!code) return toast('Введите код');
+    if (S.demo) return toast('В демо-режиме нельзя');
+    const btn = e.currentTarget; btn.disabled = true;
+    try {
+      const oldId = S.space.id;
+      const { data, error } = await sb.rpc('join_space', { p_code: code, p_display_name: localStorage.getItem('shodim-name') || null });
+      if (error) throw error;
+      if (data.id === oldId) { close(); return toast('Это код вашего же списка'); }
+      const { error: e2 } = await sb.from('space_members').delete().eq('space_id', oldId).eq('user_id', S.user.id);
+      if (e2) throw e2;
+      S.space = data; S.urls.clear();
+      await loadAll(); subscribe(); close(); go('/');
+      toast('Вы в общем списке!');
+    } catch (err) { handleErr(err); btn.disabled = false; }
+  };
 }
 
 // =========================================================
@@ -1466,7 +1495,7 @@ function seedDemo() {
       newgroup: () => groupSheet(null, 'city'), newtrip: () => groupSheet(null, 'trip'), gmenu: () => groupMenu(groupById(id)),
       pmenu: () => placeMenu(placeById(id)), delgroup: () => deleteGroupDialog(groupById(id)),
       vmenu: () => { const v = S.visits.find(x => x.id === id); visitMenu(placeById(v.place_id), v); },
-      addtravel: () => addPlace(),
+      addtravel: () => addPlace(), switch: () => switchSpaceSheet(),
       pick: () => pickPoint({ lat: 53.9071, lng: 27.5529, title: 'Кофейня «Зерно»', onDone: () => {} }),
       date: () => dateSheet({ value: '2026-09-14', sub: 'Кофейня «Зерно»', onPick: () => {} }), date2: () => dateSheet({ sub: 'Кофейня «Зерно»', onPick: () => {} }),
     }[what];

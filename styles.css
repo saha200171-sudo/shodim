@@ -471,3 +471,48 @@ button.input { color: var(--ink); }
 .scene.t-night .l.fresh, .scene.t-evening .l.fresh { animation: fresh-in .7s ease-out both; }
 .segmented.small { align-self: center; }
 .segmented.small button { height: 36px; padding: 0 16px; font-size: 15px; flex: none; }
+
+/* =========================================================
+   Компьютер и планшет (от 760 px): шире, карточки сеткой, комната целиком
+   ========================================================= */
+.dream-halves { display: flex; flex-direction: column; gap: var(--sl); }
+@media (min-width: 760px) {
+  :root { --side: 40px; --top: 48px; }
+  .app { max-width: 1180px; }
+  .screen { padding-bottom: 140px; }
+  /* сетки: сколько поместится */
+  .grid2 { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px 16px; }
+  .gcard .ph { height: 140px; }
+  .gcard.wide .ph { height: 120px; }
+  .board { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 28px 24px; }
+  .mini-gal { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  .ach-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px; }
+  .room-tiles { max-width: 720px; }
+  /* комната видна целиком — без листания */
+  .scene-vp { overflow: hidden; width: min(100%, calc(46vh * 720 / 330)); margin: 0 auto; }
+  .scene-vp + .row { width: min(100%, calc(46vh * 720 / 330)); margin: 0 auto; }
+  .dream-halves { width: min(100%, calc(60vh * 720 / 330)); margin: 0 auto; }
+  .room-tiles { margin: 0 auto; width: 100%; }
+  .scene-vp > .scene, .scene-vp > .scene-hot { width: 100%; }
+  [data-dots] { visibility: hidden; }
+  .dream-halves { flex-direction: row; gap: 0; border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; }
+  .dream-halves .scene-half { flex: 1; border-radius: 0; box-shadow: none; }
+  /* формы и карточка места — по центру, не во всю ширину */
+  .screen.page { max-width: 640px; margin: 0 auto; }
+  .hero { height: 360px; }
+  .sheetlike { max-width: 760px; margin-left: auto; margin-right: auto; border-radius: var(--r-sheet); margin-top: -100px; }
+  .hero .bar { left: max(40px, calc(50% - 380px)); right: max(40px, calc(50% - 380px)); }
+  /* шторки — окном по центру */
+  .overlay { align-items: center; padding: 24px; }
+  .sheet { max-width: 520px; border-radius: var(--r-sheet); max-height: 88vh; padding-bottom: 24px; }
+  .sheet .handle { display: none; }
+  .overlay.picker { padding: 0; }
+  .picker-sheet { border-radius: var(--r-sheet) var(--r-sheet) 0 0; }
+  /* карта на весь экран */
+  .mapwrap { max-width: none; }
+  .map-top { max-width: 640px; border-radius: 0 0 var(--r-card) var(--r-card); }
+  .map-filter, .map-bottom { max-width: 600px; }
+  .map-top { padding-left: 20px; padding-right: 20px; }
+  .map-me { right: 40px; }
+  .welcome { max-width: 480px; margin: 0 auto; }
+}

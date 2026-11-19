@@ -1776,7 +1776,7 @@ function renderAchievements() {
   app.innerHTML = `<div class="screen">
     <div class="head"><button class="round" data-go="#/room" aria-label="Назад">${icon('back')}</button><span class="cups static">${R.got.size} из ${ACHIEVEMENTS.length}</span></div>
     <div class="col"><span class="hand-m accent">за походы вместе</span><h1 class="h1">Достижения</h1></div>
-    <div class="col" style="gap:10px">${done.map(card).join('')}${todo.map(card).join('')}</div>
+    <div class="col ach-list" style="gap:10px">${done.map(card).join('')}${todo.map(card).join('')}</div>
   </div>${navHTML('r')}`;
   bindCommon();
   on('[data-ach]', 'click', (e, el) => achSheet(achById(el.dataset.ach)));
@@ -1858,7 +1858,7 @@ function renderDream() {
   app.innerHTML = `${FILTERS_SVG}<div class="screen">
     <div class="head"><button class="round" data-go="#/room" aria-label="Назад">${icon('back')}</button><span class="pill-btn static" style="background:var(--butter)">${icon('sparkle', 16)}предпросмотр</span></div>
     <div class="col"><span class="hand-m accent">когда соберём всё</span><h1 class="h1">Комната мечты</h1></div>
-    ${half('left')}${half('right')}
+    <div class="dream-halves">${half('left')}${half('right')}</div>
     <div class="card stack-xs" style="padding:14px 16px"><div class="row between"><span class="t-bold">Уже собрано ${n} из ${total} ${plural(total, 'вещи', 'вещей', 'вещей')}</span><span class="t-bold accent">${Math.round(n / total * 100)}%</span></div>
       <span class="pbar big"><span style="width:${(n / total * 100).toFixed(1)}%"></span></span>
       <span class="t-sub">С замочком — то, что ещё впереди. ${esc(hint)}</span></div>

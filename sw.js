@@ -1,6 +1,6 @@
 // Сервис-воркер: кэширует оболочку приложения, чтобы оно быстро открывалось.
 // Данные и фото всегда берутся из сети (Supabase).
-const VERSION = 'shodim-v53';
+const VERSION = 'shodim-v54';
 const SHELL = ['./', 'index.html', 'styles.css', 'js/app.js', 'js/room.js', 'js/config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png',
   'fonts/fonts.css', 'fonts/caveat-cyrillic-0.woff2', 'fonts/caveat-latin-1.woff2', 'fonts/lora-cyrillic-2.woff2', 'fonts/lora-latin-3.woff2', 'fonts/nunito-cyrillic-4.woff2', 'fonts/nunito-latin-5.woff2'];
 

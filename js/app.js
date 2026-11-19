@@ -425,6 +425,7 @@ function addPlace() {
   if (!gid) { toast('Сначала создайте группу'); return groupSheet(null, 'city'); }
   go('#/new?g=' + gid);
 }
+const deskNav = active => `<div class="desk-nav">${navHTML(active, false)}</div>`;
 const navHTML = (active, fade = true) => `${fade ? '<div class="fade"></div>' : ''}<nav class="nav">
   <button class="nav-brand" data-go="#/"><img src="icons/icon-192.png" alt=""><span>Сходим?</span></button>
   <button class="item ${active === 'p' ? 'on' : ''}" data-go="#/">${icon('places', 24)}Места</button>
@@ -1158,7 +1159,7 @@ function renderPlace(id) {
       </div>
     </div>
     <div class="fade"></div>
-    <button class="btn cta" data-act="visit">${icon('check')}Мы тут были!</button>`;
+    <button class="btn cta" data-act="visit">${icon('check')}Мы тут были!</button>${deskNav('p')}`;
   bindCommon();
   on('[data-act=heart]', 'click', async () => {
     try { await upd('places', p.id, { want_again: !p.want_again }); toast(p.want_again ? 'Отметили: хотим сюда снова' : 'Убрали из «хотим снова»'); renderPlace(id); }
@@ -1204,7 +1205,7 @@ function renderForm(id, q) {
     <div class="field"><label>Instagram</label><label class="input">${icon('insta', 20)}<input data-f="instagram" placeholder="@place или ссылка" value="${esc(F.instagram)}" autocapitalize="off"></label></div>
     <div class="field"><label>Адрес</label><label class="input">${icon('pin', 20)}<input data-f="address" placeholder="Улица, дом или ссылка на карту" value="${esc(F.address)}"></label><div data-mapprev></div></div>
     <div class="field"><label>Заметка</label><textarea class="input" data-f="note" rows="3" placeholder="Что там интересного, когда лучше идти…">${esc(F.note)}</textarea></div>
-  </div><div class="fade"></div><button class="btn cta" data-act="save">${p ? 'Сохранить' : 'Добавить место'}</button>`;
+  </div><div class="fade"></div><button class="btn cta" data-act="save">${p ? 'Сохранить' : 'Добавить место'}</button>${deskNav('p')}`;
   on('[data-f]', 'input', (e, el) => { F[el.dataset.f] = el.value; });
   on('[data-f]', 'change', (e, el) => { F[el.dataset.f] = el.value; });
   // «Назад»: из нового места — туда, откуда пришли (например, в «Путешествия»)
@@ -1895,7 +1896,7 @@ function renderDream() {
       <span class="pbar big"><span style="width:${(n / total * 100).toFixed(1)}%"></span></span>
       <span class="t-sub">С замочком — то, что ещё впереди. ${esc(hint)}</span></div>
     <button class="btn" data-go="#/room">Вернуться в нашу комнату</button>
-  </div>`;
+  </div>${deskNav('r')}`;
   bindCommon();
 }
 

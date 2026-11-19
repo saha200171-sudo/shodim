@@ -532,6 +532,7 @@ button.input { color: var(--ink); }
 
 /* ---------- Компьютер (от 1024 px): меню колонкой слева ---------- */
 .nav-brand, .plus-label { display: none; }
+.desk-nav { display: none; }
 @media (min-width: 1024px) {
   .app:has(.nav) { padding-left: 248px; max-width: calc(1180px + 248px); }
   .nav { left: 0; top: 0; bottom: 0; transform: none; width: 248px; max-width: none; height: auto; border-radius: 0;
@@ -568,4 +569,11 @@ button.input { color: var(--ink); }
   .room-side .rtile .bub { grid-row: 1 / span 2; margin: 0; }
   .room-side .rtile .t-cards { font-size: 17px; align-self: end; }
   .room-side .rtile .t-sub { align-self: start; }
+}
+
+@media (min-width: 1024px) {
+  .desk-nav { display: block; }
+  .dream-halves { width: 100%; }
+  /* карточка места при боковом меню */
+  .app:has(.nav) .hero .bar { left: max(40px, calc(50% - 380px)); right: max(40px, calc(50% - 380px)); }
 }

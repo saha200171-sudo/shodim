@@ -366,6 +366,8 @@ button.input { color: var(--ink); }
 .g-bulb { background: radial-gradient(closest-side, rgba(255, 200, 85, .95), rgba(255, 194, 79, .35) 45%, rgba(255, 194, 79, 0)); }
 .g-lantern { background: radial-gradient(closest-side, rgba(255, 205, 100, .75), rgba(255, 194, 79, .25) 50%, rgba(255, 194, 79, 0)); }
 .g-screen { border-radius: 30px; background: radial-gradient(closest-side, rgba(255, 214, 160, .5), rgba(255, 214, 160, 0)); }
+.g-lamp { background: radial-gradient(closest-side, rgba(255, 210, 110, .9), rgba(255, 194, 79, .35) 45%, rgba(255, 194, 79, 0)); }
+.g-pool { background: radial-gradient(closest-side, rgba(255, 200, 100, .45), rgba(255, 200, 100, 0)); }
 .g-cup { background: radial-gradient(closest-side, rgba(255, 210, 90, .6), rgba(255, 210, 90, 0)); }
 
 /* лёгкие анимации */

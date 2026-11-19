@@ -1350,6 +1350,8 @@ function sceneHTML({ have, placed, dream = false, ws = wsNow() }) {
   const glows = time === 'day' ? '' : [
     lit('garland') && BULBS.map((b, i) => dot(b, 20, 'g-bulb', i)).join(''),
     lit('lanterns') && LANTERNS.map((b, i) => dot(b, 46, 'g-lantern', i)).join(''),
+    // торшер: тёплый свет от абажура и мягкое пятно на полу
+    lit('torch') && `${dot([306, 210], 52, 'g-lamp', 0)}<span class="glow g-pool" style="${boxStyle([252, 278, 108, 30])}"></span>`,
     lit('film') && `<span class="glow g-screen" style="${boxStyle([370, 56, 192, 122])}"></span>`,
     lit('goldcup') && `<span class="glow g-cup" style="${boxStyle(itemBox(itemById('goldcup'), allShown).map((v, i) => i < 2 ? v - 14 : v + 28))}"></span>`,
   ].filter(Boolean).join('');
@@ -1998,6 +2000,7 @@ function seedDemo() {
   S.hasRoom = S.hasKinds = true;
   S.room = { owned: ['armchair', 'garland'], placed: {} };
   if (new URLSearchParams(location.search).has('full')) S.room.owned = SHOP.map(i => i.id);
+  for (const pl of new URLSearchParams(location.search).getAll('place')) { const [sl, it] = pl.split(':'); S.room.placed[sl] = it; }
   try { localStorage.setItem('shodim-ach-demo', JSON.stringify(ACHIEVEMENTS.map(a => a.id))); } catch { /* нет места */ }
   S.photos = [F('f1', 'v3', fake('a', '#CFE0C3', '#8FAE82'), 0), F('f2', 'v3', fake('b', '#E4EEDD', '#B5CBA8'), 1), F('f3', 'v3', fake('c', '#D3E0C9', '#6F8A64'), 2),
     F('f4', 'v4', fake('d', '#F8E4E5', '#DDAEB2'), 0), F('f5', 'v4', fake('e', '#FBF2D8', '#E5CF8E'), 1), F('f6', 'v1', (S.urls.set('demo/tall', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="540"><rect width="300" height="540" fill="#CFDDE6"/><circle cx="150" cy="170" r="60" fill="#F0CFD1"/><rect x="80" y="250" width="140" height="220" rx="40" fill="#8FB3CC"/></svg>')), 'demo/tall'), 0)];

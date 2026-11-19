@@ -816,6 +816,22 @@ function mapPadding(topEl, mfEl) {
   if (wideMap()) { const r = topEl.getBoundingClientRect(); return { paddingTopLeft: [r.width + 60, 50], paddingBottomRight: [60, 50] }; }
   return { paddingTopLeft: [40, (mfEl || topEl).getBoundingClientRect().bottom + 30], paddingBottomRight: [40, 200] };
 }
+// Фильтр «все / хотим / были»: на компьютере — справа от панели, если влезает; иначе — под ней
+function placeMapFilter(top, mf) {
+  if (!top.isConnected) return false;
+  const r = top.getBoundingClientRect();
+  mf.style.left = ''; mf.style.top = (r.bottom + 12) + 'px';
+  if (wideMap()) {
+    const left = r.right + 16, need = mf.scrollWidth;
+    if (left + need + 24 <= innerWidth) { mf.style.left = left + 'px'; mf.style.top = r.top + 'px'; }
+  }
+  return true;
+}
+function bindMapFilter(top, mf) {
+  placeMapFilter(top, mf);
+  const onR = () => { if (!placeMapFilter(top, mf)) removeEventListener('resize', onR); };
+  addEventListener('resize', onR);
+}
 // «N мест без точки» — кнопка со списком этих мест, чтобы сразу добавить адрес
 function noPointHint(box, list) {
   if (!list.length) { box.innerHTML = ''; return; }
@@ -841,7 +857,6 @@ function renderGroupMap(g, q) {
     ${navHTML('p', false)}`;
   bindCommon(); bindGroupHead(g);
   const top = $('.map-top'), mf = $('[data-mf]');
-  mf.style.top = (top.getBoundingClientRect().bottom + 12) + 'px';
   let map = null, cluster = null, sel = null, meMarker = null;
   const markers = new Map();
   const filtered = () => {
@@ -879,7 +894,7 @@ function renderGroupMap(g, q) {
     else if (pts.length === 1) map.setView([pts[0].lat, pts[0].lng], 15);
     else { const c = await groupCenter(g); if (map) map.setView([c.lat, c.lng], g.kind === 'trip' ? 5 : 12); }
   };
-  drawFilter(); drawBottom();
+  drawFilter(); drawBottom(); bindMapFilter(top, mf);
   $('[data-search]').addEventListener('input', e => { S.gfilter.q = e.target.value; sel = null; drawPins(false); });
   loadLeaflet().then(() => {
     const el = $('[data-map]'); if (!el) return; // уже ушли с экрана
@@ -930,7 +945,6 @@ function renderAllMap(q) {
     const box = $('[data-g]');
     box.innerHTML = chips.map(([k, n]) => `<button class="chip ${(M.g === k || (M.g === 'home' && k === 'all')) ? 'active' : ''}" data-k="${k}">${esc(n)}</button>`).join('');
     box.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { M.g = b.dataset.k; sel = null; drawChips(); drawFilter(); drawPins(true); });
-    mf.style.top = (top.getBoundingClientRect().bottom + 12) + 'px';
   };
   const drawFilter = () => {
     const ps = S.places.filter(inGroup);
@@ -977,7 +991,7 @@ function renderAllMap(q) {
     }
     setTimeout(drawBottom, 400);
   };
-  drawChips(); drawFilter(); drawBottom();
+  drawChips(); drawFilter(); drawBottom(); bindMapFilter(top, mf);
   loadLeaflet().then(() => {
     const el = $('[data-map]'); if (!el) return;
     map = newMap(el);

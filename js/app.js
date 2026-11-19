@@ -426,9 +426,10 @@ function addPlace() {
   go('#/new?g=' + gid);
 }
 const navHTML = (active, fade = true) => `${fade ? '<div class="fade"></div>' : ''}<nav class="nav">
+  <button class="nav-brand" data-go="#/"><img src="icons/icon-192.png" alt=""><span>Сходим?</span></button>
   <button class="item ${active === 'p' ? 'on' : ''}" data-go="#/">${icon('places', 24)}Места</button>
   <button class="item ${active === 'm' ? 'on' : ''}" data-go="#/map">${icon('map', 24)}Карта</button>
-  <button class="plus" data-act="add" aria-label="Добавить место">${icon('plus', 26)}</button>
+  <button class="plus" data-act="add" aria-label="Добавить место">${icon('plus', 26)}<span class="plus-label">Добавить место</span></button>
   <button class="item ${active === 'r' ? 'on' : ''}" data-go="#/room">${icon('home', 24)}Комната</button>
   <button class="item ${active === 'a' ? 'on' : ''}" data-go="#/album">${icon('album', 24)}Альбом</button></nav>`;
 

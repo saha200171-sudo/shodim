@@ -526,3 +526,27 @@ button.input { color: var(--ink); }
   .map-me { right: 40px; }
   .welcome { max-width: 480px; margin: 0 auto; }
 }
+
+/* ---------- Компьютер (от 1024 px): меню колонкой слева ---------- */
+.nav-brand, .plus-label { display: none; }
+@media (min-width: 1024px) {
+  .app:has(.nav) { padding-left: 248px; max-width: calc(1180px + 248px); }
+  .nav { left: 0; top: 0; bottom: 0; transform: none; width: 248px; max-width: none; height: auto; border-radius: 0;
+    flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 4px; padding: 32px 20px; box-shadow: 1px 0 0 var(--line); background: var(--card); }
+  .nav-brand { display: flex; align-items: center; gap: 12px; padding: 0 8px 24px; font: 500 26px/32px var(--serif); color: var(--ink); text-align: left; }
+  .nav-brand img { width: 44px; height: 44px; border-radius: 12px; box-shadow: var(--shadow); }
+  .nav .item { flex-direction: row; gap: 14px; height: 48px; padding: 0 14px; border-radius: var(--r-pill); font: 700 16px/22px var(--sans); min-width: 0; }
+  .nav .item:hover { background: var(--paper); }
+  .nav .item.on { background: var(--peach); color: var(--ink); }
+  .nav .item.on .ic { color: var(--accent); }
+  /* «+» — большая кнопка сверху */
+  .nav .plus { order: -1; width: 100%; height: 52px; border-radius: var(--r-pill); display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 0 16px; box-shadow: var(--shadow); }
+  .nav .nav-brand { order: -2; }
+  .plus-label { display: inline; font: 800 16px/22px var(--sans); }
+  .fade { display: none; }
+  /* всё, что было по центру экрана, — по центру области справа от меню */
+  .app:has(.nav) .mapwrap { left: 248px; right: 0; width: auto; transform: none; }
+  .app:has(.nav) .map-top, .app:has(.nav) .map-filter, .app:has(.nav) .map-bottom { left: calc(50% + 124px); }
+  .app:has(.nav) .cta { left: calc(50% + 124px); }
+  .toast { left: calc(50% + 124px); }
+}

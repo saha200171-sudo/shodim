@@ -55,7 +55,7 @@ export const ITEMS = [
   // --- окно
   I('curtains', 'Шторы', 'curtains', [104, 34, 152, 130], 13, { price: 4, cat: 'window', tile: 'sky', note: 'розовые' }),
   I('globe', 'Глобус', 'sill', [190.9, 115, 26.9, 32.5], 14, { trophy: 'trip1', cat: 'window', tile: 'butter' }),
-  I('cactus', 'Кактус', 'sill', [191.5, 114, 26, 34], 14, { price: 3, cat: 'window', tile: 'lav', note: 'на подоконник' }),
+  I('cactus', 'Кактус', 'sill2', [158, 114, 26, 34], 14, { price: 3, cat: 'window', tile: 'lav', note: 'на подоконник' }),
   I('balloon', 'Воздушный шар', 'balloon', [141.5, 63, 29, 47], 11, { trophy: 'extreme5', cat: 'window', tile: 'sky', note: 'летает за окном' }),
   // --- уютный угол (левая половина)
   I('armchair', 'Кресло', 'floorL', [18, 178, 118, 104], 50, { price: 5, cat: 'floor', tile: 'peach', note: 'мятное, с подушкой' }),
@@ -80,7 +80,7 @@ export const itemById = id => ITEMS.find(i => i.id === id);
 export const SHOP = ITEMS.filter(i => i.price);
 export const SHOP_TOTAL = SHOP.reduce((s, i) => s + i.price, 0); // 94
 export const SLOT_NAMES = {
-  ceil: 'Потолок', ceil2: 'Потолок над кинозоной', wallL: 'Стена слева', wallR: 'Стена справа', curtains: 'Окно', sill: 'Подоконник', balloon: 'За окном',
+  ceil: 'Потолок', ceil2: 'Потолок над кинозоной', wallL: 'Стена слева', wallR: 'Стена справа', curtains: 'Окно', sill: 'Подоконник', sill2: 'Подоконник слева', balloon: 'За окном',
   floorL: 'Пол слева', rugL: 'Ковёр', table: 'Столик', floorR: 'Пол справа', pet: 'Питомец', film: 'Экран', rugR: 'Ковёр в кинозоне', bags: 'Кресла',
   popcorn: 'Попкорн', skate: 'Крючки на стене', shelving: 'Стеллаж', goldcup: 'Верх стеллажа', cart: 'Тележка',
 };
@@ -183,7 +183,8 @@ export function ownedSet(owned, got) {
 // Что стоит в комнате: явный выбор (placed[slot]) или первая имеющаяся вещь для этого места
 export function arrangement(have, placed = {}) {
   const out = new Map();
-  for (const it of ITEMS) {
+  const order = [...ITEMS.filter(i => !i.price), ...ITEMS.filter(i => i.price)]; // трофей на общем месте — впереди
+  for (const it of order) {
     if (!have.has(it.id)) continue;
     const slot = it.slot;
     if (slot in placed) { if (placed[slot] === it.id) out.set(slot, it); continue; }

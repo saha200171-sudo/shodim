@@ -1829,13 +1829,20 @@ function welcomeModal(R) {
 }
 function achModal(a, after) {
   const it = a.item ? itemById(a.item) : null;
+  // новый трофей сам встаёт в комнату; то, что стояло на его месте, уходит в инвентарь
+  let moved = null;
+  if (it) {
+    const R = roomCalc(), cur = arrangement(R.have, S.room.placed).find(x => x.slot === it.slot);
+    if (cur && cur.id !== it.id) { moved = cur; if (S.demo || S.hasRoom) roomPlace(it.slot, it.id).catch(() => {}); }
+  }
   const conf = Array.from({ length: 14 }, (_, i) => `<i style="left:${(i * 37) % 100}%;top:${(i * 53) % 90}%;background:var(--${['peach', 'sage', 'butter', 'sky', 'rose'][i % 5]});transform:rotate(${i * 47}deg)"></i>`).join('');
   const { el, close } = openSheet(`<div class="confetti">${conf}</div>
     <div class="col center" style="align-items:center;gap:6px;position:relative">
       <span class="ach-ic big got" style="width:84px;height:84px">${it ? `<img src="${it.art}" alt="" style="width:60px;height:60px;object-fit:contain">` : icon(a.icon, 34)}</span>
       <span class="hand-m accent" style="margin-top:8px">новое достижение!</span><h2 class="h2">${esc(a.name)}</h2><span class="t-sub">${esc(a.text)}</span>
-      <span class="ptag" style="margin-top:8px;padding:8px 16px">${a.cups ? `${icon('cup', 18)}+${a.cups} ${cupsWord(a.cups)}` : `${icon('trophy', 18)}трофей: ${esc(it.name)}`}</span></div>
-    <div class="col" style="gap:4px;position:relative"><button class="btn" data-ok>Ура!</button><button class="link-btn danger" data-more>${a.cups ? 'В магазин' : 'Посмотреть в комнате'}</button></div>`, { center: true, onClose: after });
+      <span class="ptag" style="margin-top:8px;padding:8px 16px">${a.cups ? `${icon('cup', 18)}+${a.cups} ${cupsWord(a.cups)}` : `${icon('trophy', 18)}трофей: ${esc(it.name)}`}</span>
+      ${moved ? `<span class="t-sub" style="margin-top:6px">«${esc(it.name)}» уже в комнате, а «${esc(moved.name)}» убрали в инвентарь — вернуть можно в любой момент.</span>` : ''}</div>
+    <div class="col" style="gap:4px;position:relative"><button class="btn" data-ok>Ура!</button><button class="link-btn danger" data-more>${a.cups ? 'В магазин' : 'Посмотреть в комнате'}</button></div>`, { center: true, onClose: () => { if (moved && /^#\/room/.test(location.hash)) render(); after?.(); } });
   el.querySelector('[data-ok]').onclick = close;
   el.querySelector('[data-more]').onclick = () => { close(); go(a.cups ? '#/room/shop' : '#/room'); };
 }
@@ -2230,6 +2237,7 @@ function seedDemo() {
   S.hasRoom = S.hasKinds = true;
   S.room = { owned: ['armchair', 'monstera'], placed: {} };
   if (new URLSearchParams(location.search).has('full')) S.room.owned = SHOP.map(i => i.id);
+  for (const o of new URLSearchParams(location.search).getAll('own')) S.room.owned.push(o);
   for (const pl of new URLSearchParams(location.search).getAll('place')) { const [sl, it] = pl.split(':'); S.room.placed[sl] = it; }
   try { localStorage.setItem('shodim-ach-demo', JSON.stringify(ACHIEVEMENTS.map(a => a.id))); } catch { /* нет места */ }
   S.photos = [F('f1', 'v3', fake('a', '#CFE0C3', '#8FAE82'), 0), F('f2', 'v3', fake('b', '#E4EEDD', '#B5CBA8'), 1), F('f3', 'v3', fake('c', '#D3E0C9', '#6F8A64'), 2),

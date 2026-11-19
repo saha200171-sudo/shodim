@@ -132,6 +132,7 @@ function handleErr(e) {
   if (/invite code not found/i.test(m)) return toast('Такой код не найден — проверьте буквы и цифры');
   if (/space is full/i.test(m)) return toast('В этом списке уже двое — третьему туда нельзя');
   if (/invalid login credentials/i.test(m)) return toast('Неверная почта или пароль');
+  if (/signups? not allowed|signup.*disabled/i.test(m)) return toast('Регистрация закрыта — это приложение только для нас двоих. Войдите в свой аккаунт');
   if (/already registered|already exists/i.test(m)) return toast('Такая почта уже есть — нажмите «Войти»');
   if (/password should be|at least 6/i.test(m)) return toast('Пароль — минимум 6 символов');
   if (/email not confirmed|confirm-required/i.test(m)) return toast('Нужно выключить «Confirm email» в настройках Supabase');

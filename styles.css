@@ -153,7 +153,8 @@ input.input::placeholder, textarea.input::placeholder, .input input::placeholder
 
 /* ---------- Нижнее меню ---------- */
 .nav { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom)); width: calc(100% - 40px); max-width: 440px; height: 68px;
-  border-radius: var(--r-pill); background: var(--card); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; padding: 0 34px; z-index: 6; }
+  border-radius: var(--r-pill); background: var(--card); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; z-index: 6; }
+.nav .item { min-width: 58px; }
 .nav .item { display: flex; flex-direction: column; align-items: center; gap: 2px; font: 700 14px/18px var(--sans); color: var(--muted); }
 .nav .item.on { color: var(--accent); }
 .nav .plus { width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; }

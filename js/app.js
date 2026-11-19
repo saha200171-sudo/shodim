@@ -79,6 +79,7 @@ const I = {
   locate: '<path d="M20 4L4 11l7 2 2 7z"/>',
   eyeOff: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
   // комната
+  places: '<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>',
   cup: '<path d="M6.5 9h11l-1.3 10.4a2 2 0 0 1-2 1.6H9.8a2 2 0 0 1-2-1.6z"/><path d="M5.5 9h13"/><path d="M12.5 9l1.6-5.5h2.4"/>',
   star: '<path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
@@ -380,6 +381,7 @@ function renderInner() {
   if (a === 'travel') return renderTravel();
   if (a === 'invite') return renderInvite();
   if (a === 'room') return renderRoomRoute(b, q);
+  if (a === 'map') return renderAllMap(q);
   renderHome();
 }
 
@@ -423,8 +425,10 @@ function addPlace() {
   go('#/new?g=' + gid);
 }
 const navHTML = (active, fade = true) => `${fade ? '<div class="fade"></div>' : ''}<nav class="nav">
-  <button class="item ${active === 'p' ? 'on' : ''}" data-go="#/">${icon('map', 24)}Места</button>
+  <button class="item ${active === 'p' ? 'on' : ''}" data-go="#/">${icon('places', 24)}Места</button>
+  <button class="item ${active === 'm' ? 'on' : ''}" data-go="#/map">${icon('map', 24)}Карта</button>
   <button class="plus" data-act="add" aria-label="Добавить место">${icon('plus', 26)}</button>
+  <button class="item ${active === 'r' ? 'on' : ''}" data-go="#/room">${icon('home', 24)}Комната</button>
   <button class="item ${active === 'a' ? 'on' : ''}" data-go="#/album">${icon('album', 24)}Альбом</button></nav>`;
 
 // =========================================================
@@ -542,7 +546,7 @@ function renderHome() {
   const ts = trips();
   app.innerHTML = `<div class="screen">
     <div class="head"><div class="col"><span class="hand-m accent">привет, это мы</span><h1 class="h1">Сходим?</h1></div>
-      <button class="avatars room-entry" data-go="#/room" aria-label="Наша комната">${avatarsHTML()}<span class="house">${icon('home', 14)}</span></button></div>
+      <button class="avatars" data-go="#/invite" aria-label="Участники">${avatarsHTML()}</button></div>
     <div class="card counter"><div class="num">${been}</div><div class="col grow">
       <span class="t-bold">${plural(been, 'место', 'места', 'мест')}, где мы уже были вместе</span>
       <span class="t-sub">${want ? `и ещё ${want} ${plural(want, 'ждёт', 'ждут', 'ждут')} нас в планах` : 'добавьте места, куда хотите сходить'}</span></div></div>
@@ -849,6 +853,105 @@ function renderGroupMap(g, q) {
     cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 44, iconCreateFunction: c => L.divIcon({ className: 'cluster', html: `<span>${c.getChildCount()}</span>`, iconSize: [44, 44] }) });
     map.addLayer(cluster);
     map.on('click', () => { if (sel) { const old = sel; sel = null; refreshIcon(old); drawBottom(); } });
+    drawPins(true);
+  }).catch(() => { const el = $('[data-map]'); if (el) el.innerHTML = '<p class="t-sub center" style="padding-top:260px">Карта не загрузилась — проверьте интернет</p>'; });
+  on('[data-me]', 'click', () => {
+    if (!navigator.geolocation) return toast('На этом устройстве геопозиция недоступна');
+    navigator.geolocation.getCurrentPosition(pos => {
+      if (!map) return;
+      const ll = [pos.coords.latitude, pos.coords.longitude];
+      if (meMarker) meMarker.setLatLng(ll);
+      else meMarker = L.marker(ll, { icon: L.divIcon({ className: 'me-dot', html: '<span></span>', iconSize: [22, 22] }), interactive: false, zIndexOffset: 2000 }).addTo(map);
+      map.flyTo(ll, 15);
+    }, () => toast('Не получилось определить, где вы — разрешите доступ к геопозиции'), { enableHighAccuracy: true, timeout: 10000 });
+  });
+}
+
+// =========================================================
+// Общая карта: все места сразу. Сначала — «домашние» города (где больше всего мест),
+// путешествия не растягивают вид; чипы переключают группу, «Все» показывает всё.
+// =========================================================
+function renderAllMap(q) {
+  S.ctxGroup = null;
+  if (!S.allMap) S.allMap = { g: 'home', f: 'all' };
+  const M = S.allMap;
+  const chips = [['all', 'Все'], ...cities().filter(g => placesIn(g.id).length).map(g => [g.id, g.name]), ...(trips().some(t => placesIn(t.id).length) ? [['travel', 'Путешествия']] : [])];
+  if (M.g !== 'home' && !chips.some(([k]) => k === M.g)) M.g = 'home';
+  app.innerHTML = `<div class="mapwrap"><div class="map" data-map></div></div>
+    <div class="map-top"><div class="head"><div class="col"><span class="hand-m accent">где мы бываем</span><h1 class="h1">Карта</h1></div></div>
+      <div class="chips" data-g></div></div>
+    <div class="chips map-filter" data-mf></div>
+    <button class="round shadow map-me" data-me aria-label="Где я">${icon('locate')}</button>
+    <div class="map-bottom" data-bottom></div>
+    ${navHTML('m', false)}`;
+  bindCommon();
+  const top = $('.map-top'), mf = $('[data-mf]');
+  let map = null, cluster = null, sel = null, meMarker = null;
+  const markers = new Map();
+  const inGroup = p => { const g = groupById(p.group_id); if (!g) return false;
+    if (M.g === 'all' || M.g === 'home') return true; if (M.g === 'travel') return g.kind === 'trip'; return g.id === M.g; };
+  const filtered = () => S.places.filter(p => inGroup(p) && (M.f === 'all' || (M.f === 'want' ? isWant(p) : isBeen(p))));
+  const meta = p => { const g = groupById(p.group_id), vs = visitsOf(p.id); return [g?.name, vs.length ? `были ${vs.length} ${plural(vs.length, 'раз', 'раза', 'раз')}` : (p.tags || [])[0]].filter(Boolean).join(' · '); };
+  const drawChips = () => {
+    const box = $('[data-g]');
+    box.innerHTML = chips.map(([k, n]) => `<button class="chip ${(M.g === k || (M.g === 'home' && k === 'all')) ? 'active' : ''}" data-k="${k}">${esc(n)}</button>`).join('');
+    box.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { M.g = b.dataset.k; sel = null; drawChips(); drawFilter(); drawPins(true); });
+    mf.style.top = (top.getBoundingClientRect().bottom + 12) + 'px';
+  };
+  const drawFilter = () => {
+    const ps = S.places.filter(inGroup);
+    const n = { all: ps.length, want: ps.filter(isWant).length, been: ps.filter(isBeen).length };
+    mf.innerHTML = [['all', 'все'], ['want', 'хотим'], ['been', 'были']].map(([k, t]) => `<button class="chip ${M.f === k ? 'active' : ''}" data-f="${k}">${t} · ${n[k]}</button>`).join('');
+    mf.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { M.f = b.dataset.f; sel = null; drawFilter(); drawPins(false); });
+  };
+  // точки, которые сейчас не видно на экране (например, путешествия при «домашнем» виде)
+  const drawBottom = () => {
+    const box = $('[data-bottom]'), p = sel && placeById(sel);
+    if (p) {
+      box.innerHTML = `<button class="card map-card" data-go="#/p/${p.id}">${photo(placeImg(p), hashKey(p.id))}<span class="col grow"><span class="t-cards">${esc(p.name)}</span><span class="t-sub">${esc(meta(p))}</span></span>${icon('right', 22)}</button>`;
+      bindCommon(box); return;
+    }
+    const pts = filtered().filter(x => x.lat != null);
+    const out = map ? pts.filter(x => !map.getBounds().contains([x.lat, x.lng])) : [];
+    const noPt = filtered().filter(x => x.lat == null).length;
+    if (out.length) {
+      const trip = out.every(x => groupById(x.group_id)?.kind === 'trip');
+      box.innerHTML = `<button class="map-hint row" data-showall style="width:100%;text-align:left;color:var(--ink)">${icon('map', 18)}<span class="grow">Ещё ${out.length} ${plural(out.length, 'место', 'места', 'мест')} ${trip ? 'в путешествиях' : 'за краем карты'}</span><span class="accent t-bold">показать →</span></button>`;
+      box.querySelector('[data-showall]').onclick = () => { M.g = trip && M.g === 'home' ? 'travel' : 'all'; drawChips(); drawFilter(); drawPins(true); };
+    } else box.innerHTML = noPt ? `<div class="map-hint">${noPt} ${plural(noPt, 'место', 'места', 'мест')} без точки на карте — откройте место и добавьте адрес</div>` : '';
+  };
+  const refreshIcon = pid => { const m = markers.get(pid), p = placeById(pid); if (m && p) { m.setIcon(pinIcon(isBeen(p), pid === sel)); m.setZIndexOffset(pid === sel ? 1000 : 0); } };
+  const fitTo = pts => {
+    const padTop = mf.getBoundingClientRect().bottom + 30;
+    if (pts.length > 1) map.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lng])), { paddingTopLeft: [40, padTop], paddingBottomRight: [40, 200], maxZoom: 15 });
+    else if (pts.length === 1) map.setView([pts[0].lat, pts[0].lng], 14);
+    else map.setView([MINSK.lat, MINSK.lng], 11);
+  };
+  const drawPins = fit => {
+    if (!map) return drawBottom();
+    cluster.clearLayers(); markers.clear();
+    const pts = filtered().filter(p => p.lat != null);
+    for (const p of pts) {
+      const m = L.marker([p.lat, p.lng], { icon: pinIcon(isBeen(p), p.id === sel) });
+      m.on('click', () => { const old = sel; sel = p.id; if (old) refreshIcon(old); refreshIcon(p.id); drawBottom(); });
+      markers.set(p.id, m); cluster.addLayer(m);
+    }
+    if (fit) {
+      // «домашний» вид: только города; путешествия не растягивают карту на полмира
+      let view = pts;
+      if (M.g === 'home') { const home = pts.filter(p => groupById(p.group_id)?.kind === 'city'); if (home.length) view = home; }
+      fitTo(view);
+    }
+    setTimeout(drawBottom, 400);
+  };
+  drawChips(); drawFilter(); drawBottom();
+  loadLeaflet().then(() => {
+    const el = $('[data-map]'); if (!el) return;
+    map = newMap(el);
+    cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 44, iconCreateFunction: c => L.divIcon({ className: 'cluster', html: `<span>${c.getChildCount()}</span>`, iconSize: [44, 44] }) });
+    map.addLayer(cluster);
+    map.on('click', () => { if (sel) { const old = sel; sel = null; refreshIcon(old); drawBottom(); } });
+    map.on('moveend', () => { if (!sel) drawBottom(); });
     drawPins(true);
   }).catch(() => { const el = $('[data-map]'); if (el) el.innerHTML = '<p class="t-sub center" style="padding-top:260px">Карта не загрузилась — проверьте интернет</p>'; });
   on('[data-me]', 'click', () => {
@@ -1480,7 +1583,7 @@ function renderRoom() {
       <button class="card rtile" data-go="#/room/ach"><span class="bub" style="background:var(--butter)">${icon('star')}</span><span class="t-cards">Достижения</span><span class="t-sub">${R.got.size} из ${ACHIEVEMENTS.length}</span></button>
     </div>
     <button class="link-btn" data-go="#/invite" style="align-self:center;font-size:15px">Участники и код приглашения</button>
-  </div>${navHTML('')}`;
+  </div>${navHTML('r')}`;
   bindCommon();
   bindScene(R);
   checkStorageWarning();
@@ -1566,7 +1669,7 @@ function renderShop(q) {
     <div class="chips">${CATS.map(([k, n]) => `<button class="chip ${cat === k ? 'active' : ''}" data-go="#/room/shop${k === 'all' ? '' : '?c=' + k}">${n}</button>`).join('')}</div>
     <div class="grid2">${list.map(it => shopCardHTML(it, R)).join('')}</div>
     <p class="t-sub center" style="margin:0">Трофеи не продаются — только заслужить достижениями.</p>
-  </div>${navHTML('')}`;
+  </div>${navHTML('r')}`;
   bindCommon();
   on('[data-item]', 'click', (e, el) => itemSheet(itemById(el.dataset.item)));
 }
@@ -1620,7 +1723,7 @@ function renderInventory() {
       <div class="grid2">${list.map(it => `<button class="card scard" data-slot="${it.slot}"><span class="scard-img" style="background:var(--${it.tile})"><img src="${it.art}" alt="" loading="lazy"></span>
         <span class="t-cards">${esc(it.name)}</span><span class="ptag ${shown.has(it.id) ? 'own' : 'plain'}">${shown.has(it.id) ? icon('check', 16) + 'в комнате' : 'в инвентаре'}</span></button>`).join('')}</div>`
       : `<div class="empty"><div class="stack-xs"><h2 class="h2">Пока пусто</h2><p class="t-body muted" style="margin:0">Купите первую вещь в магазине — стаканчики дают за походы вместе.</p></div><button class="btn" data-go="#/room/shop">В магазин</button></div>`}
-  </div>${navHTML('')}`;
+  </div>${navHTML('r')}`;
   bindCommon();
   on('[data-slot]', 'click', (e, el) => slotSheet(el.dataset.slot));
 }
@@ -1643,7 +1746,7 @@ function renderAchievements() {
     <div class="head"><button class="round" data-go="#/room" aria-label="Назад">${icon('back')}</button><span class="cups static">${R.got.size} из ${ACHIEVEMENTS.length}</span></div>
     <div class="col"><span class="hand-m accent">за походы вместе</span><h1 class="h1">Достижения</h1></div>
     <div class="col" style="gap:10px">${done.map(card).join('')}${todo.map(card).join('')}</div>
-  </div>${navHTML('')}`;
+  </div>${navHTML('r')}`;
   bindCommon();
   on('[data-ach]', 'click', (e, el) => achSheet(achById(el.dataset.ach)));
 }

@@ -460,3 +460,14 @@ button.input { color: var(--ink); }
 .kind-hint .ic { color: var(--accent); }
 .chip.kind-chip { background: var(--peach); }
 .chip.kind-chip .ic { color: var(--accent); }
+
+/* превью вещи в нашей комнате (магазин) */
+.item-prev { position: relative; aspect-ratio: 16 / 9; border-radius: var(--r-card); overflow: hidden; isolation: isolate; background: #F3E8DA; flex: none; }
+.prev-scene { position: absolute; }
+.prev-scene .scene { width: 100%; }
+.scene .l.fresh { animation: fresh-in .7s ease-out both, fresh-glow 2.4s ease-in-out .7s infinite; }
+@keyframes fresh-in { from { opacity: 0; transform: translateY(-4%) scale(.96); } }
+@keyframes fresh-glow { 0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 214, 120, 0)); } 50% { filter: drop-shadow(0 0 5px rgba(255, 214, 120, .95)); } }
+.scene.t-night .l.fresh, .scene.t-evening .l.fresh { animation: fresh-in .7s ease-out both; }
+.segmented.small { align-self: center; }
+.segmented.small button { height: 36px; padding: 0 16px; font-size: 15px; flex: none; }

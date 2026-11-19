@@ -1511,7 +1511,7 @@ function itemBox(it, shown) {
 // mode: 'room' — как сейчас; 'dream' — все вещи, которых нет, полупрозрачные с замочком
 // в демо можно посмотреть другое время: ?demo&t=night&s=winter
 const wsNow = () => { const q = new URLSearchParams(location.search), w = windowState(); return S.demo ? { season: q.get('s') || w.season, time: q.get('t') || w.time } : w; };
-function sceneHTML({ have, placed, dream = false, ws = wsNow() }) {
+function sceneHTML({ have, placed, dream = false, ws = wsNow(), fresh = null }) {
   let shown = arrangement(have, placed);
   let ghosts = [];
   if (dream) {
@@ -1523,7 +1523,7 @@ function sceneHTML({ have, placed, dream = false, ws = wsNow() }) {
     .filter(({ it }) => !(it.id === 'balloon' && time === 'night'))
     .sort((a, b) => a.it.z - b.it.z);
   const allShown = all.map(x => x.it);
-  const layer = ({ it, ghost }) => `<img class="l ${it.id === 'balloon' ? 'bal' : ''} ${ghost ? 'ghost' : ''} it-${it.id}" src="${it.art}" alt="" style="${boxStyle(itemBox(it, allShown))};z-index:${it.z}">`;
+  const layer = ({ it, ghost }) => `<img class="l ${it.id === 'balloon' ? 'bal' : ''} ${ghost ? 'ghost' : ''} ${it.id === fresh ? 'fresh' : ''} it-${it.id}" src="${it.art}" alt="" style="${boxStyle(itemBox(it, allShown))};z-index:${it.z}">`;
   const lit = id => allShown.some(i => i.id === id);
   const dot = ([x, y], r, cls, i) => `<span class="glow ${cls}" style="${boxStyle([x - r, y - r, r * 2, r * 2])};animation-delay:${-(i * 0.7) % 3.4}s"></span>`;
   const glows = time === 'day' ? '' : [
@@ -1682,21 +1682,51 @@ function shopCardHTML(it, R) {
   return `<button class="card scard" data-item="${it.id}"><span class="scard-img" style="background:var(--${it.tile})"><img src="${it.art}" alt="" loading="lazy"></span>
     <span class="t-cards">${esc(it.name)}</span>${priceTag(it, R)}</button>`;
 }
+// Превью в магазине: кусочек нашей комнаты, приближенный к месту, куда встанет вещь
+const PREV_RATIO = 16 / 9;
+function previewCrop(it) {
+  const [x, y, w, h] = it.box;
+  let cw = Math.max(w * 2.4, h * 2 * PREV_RATIO, 330);
+  cw = Math.min(cw, 330 * PREV_RATIO, 720);
+  const ch = cw / PREV_RATIO;
+  const cx = Math.min(Math.max(x + w / 2 - cw / 2, 0), 720 - cw), cy = Math.min(Math.max(y + h / 2 - ch / 2, 0), 330 - ch);
+  return { cx, cy, cw, ch };
+}
+function previewHTML(it, R, withItem) {
+  const have = new Set(R.have), placed = { ...S.room.placed };
+  if (withItem) { have.add(it.id); placed[it.slot] = it.id; }
+  const { cx, cy, cw, ch } = previewCrop(it);
+  return `<div class="prev-scene" style="width:${(720 / cw * 100).toFixed(3)}%;left:${(-cx / cw * 100).toFixed(3)}%;top:${(-cy / ch * 100).toFixed(3)}%">${sceneHTML({ have, placed, fresh: withItem ? it.id : null })}</div>`;
+}
 function itemSheet(it) {
   const R = roomCalc();
+  const occupant = arrangement(R.have, S.room.placed).find(x => x.slot === it.slot && x.id !== it.id);
   const own = R.have.has(it.id);
   const ach = it.price ? null : ACHIEVEMENTS.find(a => a.item === it.id);
   const lack = it.price ? it.price - R.bal.balance : 0;
   const placedNow = arrangement(R.have, S.room.placed).some(x => x.id === it.id);
-  const { el, close } = openSheet(`<div class="item-hero" style="background:var(--${it.tile})"><img src="${it.art}" alt=""></div>
+  const showOcc = occupant && !placedNow;
+  const cap = placedNow ? 'Уже стоит в вашей комнате'
+    : showOcc ? `Встанет здесь, а «${occupant.name}» отправится в инвентарь`
+    : ach && !own ? `Так будет, когда получите «${ach.name}»` : 'Так встанет в вашей комнате';
+  const { el, close } = openSheet(`${FILTERS_SVG}<div class="stack-xs"><div class="item-prev" data-prev>${previewHTML(it, R, true)}</div>
+      ${showOcc ? `<div class="segmented small" data-cmp><button data-v="0">сейчас</button><button class="on" data-v="1">с новой вещью</button></div>` : ''}
+      <span class="t-sub center" data-cap>${esc(cap)}</span></div>
     <div class="stack-xs"><h2 class="h2">${esc(it.name)}</h2><span class="t-sub">${esc([it.note, SLOT_NAMES[it.slot]].filter(Boolean).join(' · '))}</span></div>
     ${ach ? `<div class="kind-hint" style="cursor:default">${icon('trophy', 18)}<span>Трофей за «${esc(ach.name)}»: ${esc(ach.text.toLowerCase())}. ${own ? 'Уже ваш!' : `Сейчас ${Math.min(ach.value(R.stats), ach.goal)} из ${ach.goal}.`}</span></div>` : ''}
     ${own ? `<button class="btn" data-place ${placedNow ? 'disabled' : ''}>${placedNow ? 'Уже стоит в комнате' : 'Поставить в комнату'}</button>`
       : it.price ? `<button class="btn" data-buy ${lack > 0 ? 'disabled' : ''}>${icon('cup')}${lack > 0 ? `Не хватает ${lack} ${cupsGen(lack)}` : `Купить за ${it.price}`}</button>
         <span class="t-sub center" style="margin-top:-8px">У вас ${R.bal.balance} ${cupsWord(R.bal.balance)}${lack > 0 ? ' — +1 за каждый визит и награды за достижения' : ''}</span>`
       : `<button class="btn ghost on-card" data-ach>К достижениям</button>`}`);
+  // «сейчас / с вещью» — сравнить, если вещь займёт чьё-то место
+  el.querySelectorAll('[data-cmp] [data-v]').forEach(b => b.onclick = () => {
+    const v = b.dataset.v === '1';
+    el.querySelectorAll('[data-cmp] [data-v]').forEach(x => x.classList.toggle('on', x === b));
+    el.querySelector('[data-prev]').innerHTML = previewHTML(it, R, v);
+    el.querySelector('[data-cap]').textContent = v ? cap : `Сейчас здесь «${occupant.name}»`;
+  });
   el.querySelector('[data-buy]')?.addEventListener('click', async e => {
-    e.currentTarget.disabled = true;
+    const btn = e.currentTarget; btn.disabled = true;
     try {
       // что сейчас стоит на этом месте — новая вещь его не сдвигает, а ложится в инвентарь
       const before = arrangement(R.have, S.room.placed).find(x => x.slot === it.slot);
@@ -1704,7 +1734,7 @@ function itemSheet(it) {
       if (S.room.placed[it.slot] === null) await roomPlace(it.slot, it.id);          // место было пустым — ставим
       else if (before && !(it.slot in S.room.placed)) await roomPlace(it.slot, before.id);
       close(); render(); toast(before ? `Купили! «${it.name}» — в инвентаре` : `Купили! «${it.name}» уже в комнате 💛`);
-    } catch (err) { if (err.message !== 'silent') handleErr(err); e.currentTarget.disabled = false; }
+    } catch (err) { if (err.message !== 'silent') handleErr(err); btn.disabled = false; }
   });
   el.querySelector('[data-place]')?.addEventListener('click', async () => {
     try { await roomPlace(it.slot, it.id); close(); go('#/room'); toast('Поставили'); } catch (err) { if (err.message !== 'silent') handleErr(err); }
@@ -2198,7 +2228,7 @@ function seedDemo() {
   };
   const F = (id, vid, path, n) => ({ id, space_id: 'demo', visit_id: vid, path, sort_order: n });
   S.hasRoom = S.hasKinds = true;
-  S.room = { owned: ['armchair', 'garland'], placed: {} };
+  S.room = { owned: ['armchair', 'monstera'], placed: {} };
   if (new URLSearchParams(location.search).has('full')) S.room.owned = SHOP.map(i => i.id);
   for (const pl of new URLSearchParams(location.search).getAll('place')) { const [sl, it] = pl.split(':'); S.room.placed[sl] = it; }
   try { localStorage.setItem('shodim-ach-demo', JSON.stringify(ACHIEVEMENTS.map(a => a.id))); } catch { /* нет места */ }

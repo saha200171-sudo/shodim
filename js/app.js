@@ -1225,7 +1225,7 @@ function renderForm(id, q) {
   };
   app.innerHTML = `<div class="screen page">
     <div class="head"><div class="title"><button class="round" data-act="back" aria-label="Назад">${icon('back')}</button><h1 class="h2">${p ? 'Изменить место' : 'Новое место'}</h1></div></div>
-    <div class="field"><span class="label">Фото</span><div data-cover></div></div>
+    <div class="field field-photo"><span class="label">Фото</span><div data-cover></div></div>
     <div class="field"><label for="f-name">Название</label><input id="f-name" class="input" data-f="name" placeholder="Например, кофейня «Зерно»" value="${esc(F.name)}"></div>
     <div class="field"><label>Группа</label><label class="input"><select data-f="group_id">${groupOptions()}</select>${icon('down', 20)}</label></div>
     <div class="field"><span class="label">Что это за место? <span class="t-sub" style="font-weight:400">для достижений</span></span><div class="chips" data-kinds></div></div>
@@ -1234,7 +1234,8 @@ function renderForm(id, q) {
     <div class="field"><label>Instagram</label><label class="input">${icon('insta', 20)}<input data-f="instagram" placeholder="@place или ссылка" value="${esc(F.instagram)}" autocapitalize="off"></label></div>
     <div class="field"><label>Адрес</label><label class="input">${icon('pin', 20)}<input data-f="address" placeholder="Улица, дом или ссылка на карту" value="${esc(F.address)}"></label><div data-mapprev></div></div>
     <div class="field"><label>Заметка</label><textarea class="input" data-f="note" rows="3" placeholder="Что там интересного, когда лучше идти…">${esc(F.note)}</textarea></div>
-  </div><div class="fade"></div><button class="btn cta" data-act="save">${p ? 'Сохранить' : 'Добавить место'}</button>${deskNav('p')}`;
+    <button class="btn cta" data-act="save">${p ? 'Сохранить' : 'Добавить место'}</button>
+  </div><div class="fade"></div>${deskNav('p')}`;
   on('[data-f]', 'input', (e, el) => { F[el.dataset.f] = el.value; });
   on('[data-f]', 'change', (e, el) => { F[el.dataset.f] = el.value; });
   // «Назад»: из нового места — туда, откуда пришли (например, в «Путешествия»)

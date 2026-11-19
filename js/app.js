@@ -650,7 +650,9 @@ function renderGroup(id, q) {
       const msg = qq || S.gfilter.tag ? 'Ничего не нашлось' : tab === 'want' ? 'Все места отсюда уже посещены — можно добавить новые' : 'Здесь вы ещё нигде не были — самое время сходить!';
       box.innerHTML = `<p class="t-sub center" style="margin:24px 0">${msg}</p>`; return;
     }
-    box.innerHTML = `<div class="grid2">${items.map(p => placeCardHTML(p, tab)).join('')}</div>`;
+    // в «Хотим» в конце сетки — пунктирная карточка «+ Добавить место» (как «+ Новая поездка»)
+    const addTile = tab === 'want' && !qq && !S.gfilter.tag ? `<button class="pcard add-tile" data-act="add"><span class="ph">${icon('plus', 26)}</span><span class="t-cards">Добавить место</span></button>` : '';
+    box.innerHTML = `<div class="grid2">${items.map(p => placeCardHTML(p, tab)).join('')}${addTile}</div>`;
     bindCommon(box);
     box.querySelectorAll('.pcard').forEach(el => longPress(el, done => placeMenu(placeById(el.dataset.pid), done)));
   };

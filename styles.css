@@ -635,3 +635,11 @@ button.input { color: var(--ink); }
   /* меню слева — снизу запас под нижнюю панель не нужен */
   .app:has(.nav) .screen { padding-bottom: 56px; }
 }
+
+/* пунктирная карточка «+ Добавить место» в группе */
+.add-tile .ph { display: grid; place-items: center; background: none; border: 1.5px dashed var(--dash); color: var(--accent); }
+.add-tile .t-cards { color: var(--muted); }
+.add-tile:hover .ph { background: var(--card); }
+@media (min-width: 760px) {
+  .empty .btn { width: auto; padding: 0 40px; } /* «Добавить место» в пустой группе — по ширине текста */
+}

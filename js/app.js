@@ -1889,8 +1889,9 @@ function renderDream() {
   const hint = next ? (R.bal.balance >= next.price ? `Уже хватает на «${next.name}» — загляните в магазин!` : `Ближайшее: ${next.name.toLowerCase()}, не хватает ${next.price - R.bal.balance} ${cupsGen(next.price - R.bal.balance)}.`) : 'Все вещи из магазина уже ваши!';
   const half = side => `<div class="scene-half ${side}">${sceneHTML({ have: R.have, placed: S.room.placed, dream: true })}</div>`;
   app.innerHTML = `${FILTERS_SVG}<div class="screen">
-    <div class="head"><button class="round" data-go="#/room" aria-label="Назад">${icon('back')}</button><span class="pill-btn static" style="background:var(--butter)">${icon('sparkle', 16)}предпросмотр</span></div>
-    <div class="col"><span class="hand-m accent">когда соберём всё</span><h1 class="h1">Комната мечты</h1></div>
+    <div class="head"><button class="round" data-go="#/room" aria-label="Назад">${icon('back')}</button><span class="pill-btn static only-phone" style="background:var(--butter)">${icon('sparkle', 16)}предпросмотр</span></div>
+    <div class="row between" style="align-items:flex-end"><div class="col"><span class="hand-m accent">когда соберём всё</span><h1 class="h1">Комната мечты</h1></div>
+      <span class="pill-btn static only-desk" style="background:var(--butter);margin-bottom:6px">${icon('sparkle', 16)}предпросмотр</span></div>
     <div class="dream-halves">${half('left')}${half('right')}</div>
     <div class="dream-foot"><div class="card stack-xs grow" style="padding:14px 16px"><div class="row between"><span class="t-bold">Уже собрано ${n} из ${total} ${plural(total, 'вещи', 'вещей', 'вещей')}</span><span class="t-bold accent">${Math.round(n / total * 100)}%</span></div>
       <span class="pbar big"><span style="width:${(n / total * 100).toFixed(1)}%"></span></span>

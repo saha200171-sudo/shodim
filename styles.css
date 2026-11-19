@@ -494,7 +494,8 @@ button.input { color: var(--ink); }
   .trips-grid .trip .ph { height: auto; aspect-ratio: 16 / 7; }
   .trips-grid .trip-new { height: auto; min-height: 120px; }
   .only-desk { display: flex !important; }
-  .stack-s.only-desk { gap: var(--sl); } /* как между «Наши группы» и карточками */
+  .stack-s.only-desk { gap: var(--sl); }
+  .room-main .scene-vp + .row { display: none; } /* на широком экране «Комната мечты» — справа от заголовка */ /* как между «Наши группы» и карточками */
   .trip-add { min-height: 0; height: 100%; border-radius: var(--r-card); }
   .board { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 28px 24px; }
   .mini-gal { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
@@ -562,8 +563,7 @@ button.input { color: var(--ink); }
   .room-layout { display: flex; flex-direction: column; gap: 20px; }
   .room-layout .scene-vp, .room-layout .scene-vp + .row { width: 100%; margin: 0; }
   .room-side .room-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; max-width: none; }
-  .room-main [data-dots] { display: none; }
-  .room-main .scene-vp + .row { justify-content: flex-start; }
+  .room-main .scene-vp + .row { display: none; } /* «Комната мечты» на компьютере — справа от заголовка */
   .room-side .rtile { display: grid; grid-template-columns: 48px 1fr; grid-template-rows: auto auto; column-gap: 14px; row-gap: 0; align-items: center; text-align: left; padding: 14px 16px; }
   .room-side .rtile .bub { grid-row: 1 / span 2; margin: 0; }
   .room-side .rtile .t-cards { font-size: 17px; align-self: end; }

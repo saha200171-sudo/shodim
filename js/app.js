@@ -1601,11 +1601,12 @@ function renderRoom() {
   const empty = R.have.size === 0;
   app.innerHTML = `${FILTERS_SVG}<div class="screen">
     <div class="head"><button class="round" data-go="#/" aria-label="Назад">${icon('back')}</button>${cupsPill(R.bal.balance)}</div>
-    <div class="col"><span class="hand-m accent">${empty ? 'пока пустовато' : 'уютно у нас'}</span><h1 class="h1">Наша комната</h1></div>
+    <div class="row between" style="align-items:flex-end"><div class="col"><span class="hand-m accent">${empty ? 'пока пустовато' : 'уютно у нас'}</span><h1 class="h1">Наша комната</h1></div>
+      <button class="pill-btn only-desk" data-go="#/room/dream" style="margin-bottom:6px">${icon('sparkle', 16)}Комната мечты</button></div>
     <div class="room-layout"><div class="stack-s room-main">
       <div class="scene-vp" data-vp>${sceneHTML({ have: R.have, placed: S.room.placed })}<div class="scene-hot" data-hot></div></div>
       <div class="row between"><div class="row" style="gap:6px" data-dots><span class="dot on"></span><span class="dot"></span><span class="t-sub" style="margin-left:6px" data-hint>листайте →</span></div>
-        <button class="pill-btn" data-go="#/room/dream">${icon('sparkle', 16)}Комната мечты</button></div>
+        <button class="pill-btn only-phone" data-go="#/room/dream">${icon('sparkle', 16)}Комната мечты</button></div>
     </div><div class="room-side">
     ${empty ? `<div class="note"><div class="hand-m">как это работает</div><div class="t-body">За походы вместе — достижения и стаканчики: +1 за каждый визит и награды за достижения. На стаканчики покупаются вещи, и комната становится уютнее.</div></div>` : ''}
     ${!S.hasRoom && !S.demo ? `<div class="kind-hint" style="cursor:default">${icon('lock', 18)}<span>Чтобы покупки сохранялись, нужно один раз запустить <b>003_room.sql</b> в Supabase (SQL Editor).</span></div>` : ''}

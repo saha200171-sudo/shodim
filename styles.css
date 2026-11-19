@@ -250,3 +250,48 @@ button.input { color: var(--ink); }
 .trip.pressed { transform: scale(1.02); box-shadow: var(--shadow-lift); transition: transform .15s; }
 .trip { user-select: none; -webkit-user-select: none; }
 .trip .ph .sun { right: 26%; }
+
+/* =========================================================
+   Карта
+   ========================================================= */
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.mapwrap { position: fixed; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; z-index: 0; }
+.map { width: 100%; height: 100%; background: #F2ECE2; }
+.leaflet-container { font-family: var(--sans); background: #F2ECE2; }
+.leaflet-tile-pane { filter: grayscale(.45) sepia(.28) saturate(.95) brightness(1.04) contrast(.92); } /* приглушаем OSM и даём тёплый оттенок под «бумагу» */
+.leaflet-control-attribution { font: 400 10px/14px var(--sans) !important; background: rgba(251, 246, 239, .85) !important; color: var(--muted) !important; }
+.leaflet-control-attribution a { color: var(--muted) !important; }
+.mapwrap .leaflet-bottom { bottom: calc(92px + env(safe-area-inset-bottom)); }
+.map-top { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; z-index: 5;
+  background: var(--paper); border-radius: 0 0 var(--r-card) var(--r-card); box-shadow: var(--shadow); padding: var(--top) 20px 16px; display: flex; flex-direction: column; gap: 16px; }
+.map-filter { position: fixed; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 440px; z-index: 5; }
+.map-filter .chip { box-shadow: var(--shadow); }
+.map-me { position: fixed; right: max(20px, calc(50% - 220px)); bottom: calc(200px + env(safe-area-inset-bottom)); z-index: 5; color: var(--accent); }
+.map-bottom { position: fixed; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 440px; bottom: calc(104px + env(safe-area-inset-bottom)); z-index: 5; }
+.map-card { display: flex; align-items: center; gap: 12px; padding: 10px 16px 10px 10px; width: 100%; text-align: left; color: var(--ink); }
+.map-card .ph { width: 72px; height: 72px; border-radius: var(--r-mini); flex: none; }
+.map-card > .ic { color: var(--muted); }
+.map-hint { background: var(--card); border-radius: var(--r-photo); padding: 10px 14px; font: 400 14px/18px var(--sans); color: var(--muted); box-shadow: var(--shadow); }
+.pin { background: none; border: 0; filter: drop-shadow(0 3px 4px rgba(77, 51, 38, .3)); }
+.pin svg { display: block; }
+.cluster { background: none; border: 0; }
+.cluster span { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: #fff; border: 3px solid #fff; display: grid; place-items: center;
+  font: 800 16px var(--sans); box-shadow: 0 3px 8px rgba(77, 51, 38, .3); }
+.me-dot span { display: block; width: 22px; height: 22px; border-radius: 50%; background: #5B8DEF; border: 4px solid #fff; box-shadow: 0 0 0 6px rgba(91, 141, 239, .25); }
+/* превью в форме места */
+.map-prev { position: relative; height: 140px; border-radius: var(--r-photo); overflow: hidden; margin-top: 8px; isolation: isolate; background: #F2ECE2; }
+.map-prev-map { position: absolute; inset: 0; }
+.map-prev-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); z-index: 500; pointer-events: none; filter: drop-shadow(0 3px 4px rgba(77, 51, 38, .3)); }
+.map-prev .chip { position: absolute; right: 10px; bottom: 10px; z-index: 500; box-shadow: var(--shadow); }
+.map-prev .leaflet-control-attribution { font-size: 9px !important; line-height: 12px !important; }
+.map-prev .leaflet-bottom.leaflet-right { right: auto; left: 0; }
+/* экран «Где это место?» */
+.overlay.picker { background: var(--paper); display: block; animation: none; padding: 0; }
+.picker-map { position: absolute; inset: 0; }
+.picker-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); z-index: 500; pointer-events: none; filter: drop-shadow(0 6px 6px rgba(77, 51, 38, .3)); }
+.picker-top { position: absolute; top: var(--top); left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 440px; z-index: 600; display: flex; gap: 8px; align-items: center; }
+.picker-addr { height: 48px; border-radius: var(--r-pill); box-shadow: var(--shadow); font: 600 15px/20px var(--sans); overflow: hidden; }
+.picker-addr .grow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.picker-addr .ic { color: var(--accent); }
+.picker-sheet { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 600; animation: none; }
+.picker .leaflet-bottom { bottom: 200px; }

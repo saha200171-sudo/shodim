@@ -72,6 +72,8 @@ const I = {
   close: '<path d="M7 7l10 10M17 7L7 17"/>',
   share: '<path d="M12 4v11M8 8l4-4 4 4M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/>',
   eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1" fill="currentColor" stroke="none"/>',
+  locate: '<path d="M20 4L4 11l7 2 2 7z"/>',
   eyeOff: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
 };
 const icon = (k, size = 22) => `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>`;
@@ -309,6 +311,7 @@ async function tryRefresh() {
   try {
     await loadAll();
     const y = scrollY; render(); scrollTo(0, y);
+    backfillCoords();
   } catch (e) { console.warn(e); }
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.space && !S.demo) scheduleRefresh(); });
@@ -331,6 +334,7 @@ window.addEventListener('hashchange', e => {
 
 function render() {
   document.querySelectorAll('.overlay').forEach(o => o.remove());
+  cleanupMaps();
   const { parts, q } = parseRoute();
   const [a, b, c] = parts;
   if (a === 'join' && b) { localStorage.setItem('shodim-join', b); }
@@ -386,7 +390,7 @@ function addPlace() {
   if (!gid) { toast('Сначала создайте группу'); return groupSheet(null, 'city'); }
   go('#/new?g=' + gid);
 }
-const navHTML = active => `<div class="fade"></div><nav class="nav">
+const navHTML = (active, fade = true) => `${fade ? '<div class="fade"></div>' : ''}<nav class="nav">
   <button class="item ${active === 'p' ? 'on' : ''}" data-go="#/">${icon('map', 24)}Места</button>
   <button class="plus" data-act="add" aria-label="Добавить место">${icon('plus', 26)}</button>
   <button class="item ${active === 'a' ? 'on' : ''}" data-go="#/album">${icon('album', 24)}Альбом</button></nav>`;
@@ -557,6 +561,7 @@ function renderGroup(id, q) {
   if (!g) return go('/');
   if (S.ctxGroup !== id) S.gfilter = { q: '', tag: null };
   S.ctxGroup = id;
+  if (q.get('view') === 'map') return renderGroupMap(g, q);
   const tab = q.get('tab') === 'been' ? 'been' : 'want';
   const ps = placesIn(id);
   const want = ps.filter(isWant), been = ps.filter(isBeen).sort((a, b) => lastVisit(b).localeCompare(lastVisit(a)));
@@ -566,11 +571,11 @@ function renderGroup(id, q) {
   if (S.gfilter.tag && !tags.includes(S.gfilter.tag)) S.gfilter.tag = null;
   const st = g.kind === 'trip' ? tripStatus(g) : null;
   app.innerHTML = `<div class="screen">
-    <div class="head"><div class="title"><button class="round" data-go="${g.kind === 'trip' ? '#/travel' : '#/'}" aria-label="Назад">${icon('back')}</button><h1 class="h1">${esc(g.name)}</h1></div>
-      <div class="acts"><button class="round peach" data-act="dice" aria-label="Случайное место">${icon('dice', 26)}</button><button class="round" data-act="more" aria-label="Ещё">${icon('more')}</button></div></div>
+    ${groupHeadHTML(g)}
     ${st ? `<div class="chips"><span class="chip ${st.cls || ''}">${esc(st.text)}</span></div>` : ''}
     <div class="segmented"><button class="${tab === 'want' ? 'on' : ''}" data-go="#/g/${id}">Хотим · ${want.length}</button><button class="${tab === 'been' ? 'on' : ''}" data-go="#/g/${id}?tab=been">Были · ${been.length}</button></div>
-    ${ps.length ? `<label class="input white">${icon('search', 20)}<input type="search" placeholder="Найти место" value="${esc(S.gfilter.q)}" data-search></label>
+    ${ps.length ? `<div class="row" style="gap:8px"><label class="input white grow">${icon('search', 20)}<input type="search" placeholder="Найти место" value="${esc(S.gfilter.q)}" data-search></label>
+      <button class="round big" data-go="#/g/${id}?view=map${tab === 'been' ? '&tab=been' : ''}" aria-label="Показать на карте">${icon('map')}</button></div>
       ${tags.length ? `<div class="chips" data-tags></div>` : ''}` : ''}
     <div data-list></div></div>${navHTML('p')}`;
   bindCommon();
@@ -595,13 +600,222 @@ function renderGroup(id, q) {
   };
   drawTags(); drawList();
   $('[data-search]')?.addEventListener('input', e => { S.gfilter.q = e.target.value; drawList(); });
+  bindGroupHead(g);
+}
+function groupHeadHTML(g) {
+  return `<div class="head"><div class="title"><button class="round" data-go="${g.kind === 'trip' ? '#/travel' : '#/'}" aria-label="Назад">${icon('back')}</button><h1 class="h1">${esc(g.name)}</h1></div>
+    <div class="acts"><button class="round peach" data-act="dice" aria-label="Случайное место">${icon('dice', 26)}</button><button class="round" data-act="more" aria-label="Ещё">${icon('more')}</button></div></div>`;
+}
+function bindGroupHead(g) {
   on('[data-act=dice]', 'click', () => {
-    const pool = want.length ? want : ps;
+    const ps = placesIn(g.id), want = ps.filter(isWant), pool = want.length ? want : ps;
     if (!pool.length) return toast('Пока не из чего выбирать');
     const p = pool[Math.floor(Math.random() * pool.length)];
     toast('Сходим сюда? 🎲'); go('#/p/' + p.id);
   });
   on('[data-act=more]', 'click', () => groupMenu(g));
+}
+
+// =========================================================
+// Карта: Leaflet + OpenStreetMap (бесплатно, без ключа), поиск адресов — Nominatim
+// =========================================================
+const LEAFLET = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/';
+const MCLUSTER = 'https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/';
+const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILES_ATTR = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+const MINSK = { lat: 53.9006, lng: 27.5590 };
+let leafletP = null;
+function loadLeaflet() {
+  if (window.L?.markerClusterGroup) return Promise.resolve(window.L);
+  if (leafletP) return leafletP;
+  const css = href => new Promise(r => { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; l.onload = r; l.onerror = r; document.head.appendChild(l); });
+  const js = src => new Promise((r, j) => { const s = document.createElement('script'); s.src = src; s.onload = r; s.onerror = () => j(new Error('map-load')); document.head.appendChild(s); });
+  leafletP = Promise.all([css(LEAFLET + 'leaflet.css'), css(MCLUSTER + 'MarkerCluster.css')])
+    .then(() => js(LEAFLET + 'leaflet.js')).then(() => js(MCLUSTER + 'leaflet.markercluster.js')).then(() => window.L)
+    .catch(e => { leafletP = null; throw e; });
+  return leafletP;
+}
+const liveMaps = new Set();
+function cleanupMaps() { for (const m of liveMaps) { try { m.remove(); } catch { /* уже удалена */ } } liveMaps.clear(); }
+function newMap(el, opts = {}) {
+  const m = L.map(el, { zoomControl: false, ...opts });
+  m.attributionControl.setPrefix(false);
+  L.tileLayer(TILES, { maxZoom: 19, attribution: TILES_ATTR }).addTo(m);
+  liveMaps.add(m);
+  return m;
+}
+const pinHTML = (been, big) => `<svg width="${big ? 46 : 34}" height="${big ? 58 : 43}" viewBox="0 0 36 46" aria-hidden="true"><path d="M18 44S3 31 3 18.5A15 15 0 0 1 33 18.5C33 31 18 44 18 44Z" fill="${been ? '#8FAE82' : '#D9826B'}" stroke="#fff" stroke-width="3"/>${been ? '<path d="M12 18.5l4 4 8-8.5" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' : '<circle cx="18" cy="18" r="5.5" fill="#fff"/>'}</svg>`;
+const pinIcon = (been, big) => L.divIcon({ className: 'pin', html: pinHTML(been, big), iconSize: big ? [46, 58] : [34, 43], iconAnchor: big ? [23, 57] : [17, 42] });
+
+// Nominatim: не чаще 1 запроса в секунду (правило сервиса)
+let geoChain = Promise.resolve();
+function nominatim(path) {
+  const run = async () => {
+    const r = await fetch('https://nominatim.openstreetmap.org/' + path, { headers: { Accept: 'application/json' } });
+    if (!r.ok) throw new Error('geo ' + r.status);
+    return r.json();
+  };
+  const p = geoChain.then(run);
+  geoChain = p.catch(() => {}).then(() => new Promise(r => setTimeout(r, 1100)));
+  return p;
+}
+async function geocode(q) {
+  if (S.demo || !q) return null;
+  try { const j = await nominatim('search?format=jsonv2&limit=1&accept-language=ru&q=' + encodeURIComponent(q)); return j[0] ? { lat: +j[0].lat, lng: +j[0].lon } : null; }
+  catch { return null; }
+}
+async function reverseGeocode(lat, lng) {
+  if (S.demo) return null;
+  try {
+    const j = await nominatim(`reverse?format=jsonv2&zoom=18&accept-language=ru&lat=${lat}&lon=${lng}`);
+    const a = j.address || {};
+    const street = [a.road || a.pedestrian || a.footway || a.square || a.neighbourhood || a.suburb, a.house_number].filter(Boolean).join(', ');
+    return [street, a.city || a.town || a.village].filter(Boolean).join(', ') || (j.display_name || '').split(',').slice(0, 2).join(',');
+  } catch { return null; }
+}
+// координаты места: из ссылки на карту — сразу, из адреса — поиском (с названием города/страны группы)
+async function coordsFor(address, gid) {
+  if (!address) return null;
+  if (isUrl(address)) return parseCoords(address);
+  const g = groupById(gid);
+  return geocode(address + (g ? ', ' + g.name : ''));
+}
+async function groupCenter(g) {
+  const key = 'shodim-gc-' + g.name;
+  try { const c = JSON.parse(localStorage.getItem(key) || 'null'); if (c) return c; } catch { /* нет */ }
+  const c = await geocode(g.name);
+  if (c) localStorage.setItem(key, JSON.stringify(c));
+  return c || MINSK;
+}
+// Один раз находим точки для мест, добавленных до появления карты
+let backfillRunning = false;
+async function backfillCoords() {
+  if (S.demo || backfillRunning) return;
+  backfillRunning = true;
+  let tried = {};
+  try { tried = JSON.parse(localStorage.getItem('shodim-geo-tried') || '{}'); } catch { /* нет */ }
+  let changed = false;
+  for (const p of S.places.filter(x => x.lat == null && x.address)) {
+    const key = p.id + '|' + p.address;
+    if (tried[key]) continue;
+    tried[key] = 1; localStorage.setItem('shodim-geo-tried', JSON.stringify(tried));
+    const c = await coordsFor(p.address, p.group_id);
+    if (c) { try { await upd('places', p.id, { lat: c.lat, lng: c.lng }); changed = true; } catch (e) { console.warn(e); } }
+  }
+  backfillRunning = false;
+  if (changed && /view=map/.test(location.hash) && !document.querySelector('.overlay')) render();
+}
+
+function renderGroupMap(g, q) {
+  const id = g.id, tab = q.get('tab') === 'been' ? 'been' : 'want';
+  const ps = placesIn(id);
+  if (S.mapFilterGroup !== id) { S.mapFilter = 'all'; S.mapFilterGroup = id; }
+  app.innerHTML = `<div class="mapwrap"><div class="map" data-map></div></div>
+    <div class="map-top">${groupHeadHTML(g)}
+      <div class="row" style="gap:8px"><label class="input white grow">${icon('search', 20)}<input type="search" placeholder="Найти место" value="${esc(S.gfilter.q)}" data-search></label>
+        <button class="round big" data-go="#/g/${id}${tab === 'been' ? '?tab=been' : ''}" aria-label="Списком">${icon('list')}</button></div></div>
+    <div class="chips map-filter" data-mf></div>
+    <button class="round shadow map-me" data-me aria-label="Где я">${icon('locate')}</button>
+    <div class="map-bottom" data-bottom></div>
+    ${navHTML('p', false)}`;
+  bindCommon(); bindGroupHead(g);
+  const top = $('.map-top'), mf = $('[data-mf]');
+  mf.style.top = (top.getBoundingClientRect().bottom + 12) + 'px';
+  let map = null, cluster = null, sel = null, meMarker = null;
+  const markers = new Map();
+  const filtered = () => {
+    const qq = S.gfilter.q.toLowerCase();
+    return ps.filter(p => (S.mapFilter === 'all' || (S.mapFilter === 'want' ? isWant(p) : isBeen(p))) &&
+      (!qq || [p.name, p.note, p.address, ...(p.tags || [])].join(' ').toLowerCase().includes(qq)));
+  };
+  const meta = p => { const vs = visitsOf(p.id); return [...(p.tags || []), vs.length ? `были ${vs.length} ${plural(vs.length, 'раз', 'раза', 'раз')}` : (isUrl(p.address) ? '' : p.address)].filter(Boolean).join(' · '); };
+  const drawFilter = () => {
+    const n = { all: ps.length, want: ps.filter(isWant).length, been: ps.filter(isBeen).length };
+    mf.innerHTML = [['all', 'все'], ['want', 'хотим'], ['been', 'были']].map(([k, t]) => `<button class="chip ${S.mapFilter === k ? 'active' : ''}" data-k="${k}">${t} · ${n[k]}</button>`).join('');
+    mf.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { S.mapFilter = b.dataset.k; sel = null; drawFilter(); drawPins(true); });
+  };
+  const drawBottom = () => {
+    const box = $('[data-bottom]'), p = sel && placeById(sel);
+    if (p) {
+      box.innerHTML = `<button class="card map-card" data-go="#/p/${p.id}">${photo(placeImg(p), hashKey(p.id))}<span class="col grow"><span class="t-cards">${esc(p.name)}</span><span class="t-sub">${esc(meta(p))}</span></span>${icon('right', 22)}</button>`;
+      bindCommon(box); return;
+    }
+    const noPt = filtered().filter(x => x.lat == null).length;
+    box.innerHTML = noPt ? `<div class="map-hint">${noPt} ${plural(noPt, 'место', 'места', 'мест')} без точки на карте — откройте место и добавьте адрес или ссылку на карту</div>` : '';
+  };
+  const refreshIcon = pid => { const m = markers.get(pid), p = placeById(pid); if (m && p) { m.setIcon(pinIcon(isBeen(p), pid === sel)); m.setZIndexOffset(pid === sel ? 1000 : 0); } };
+  const drawPins = async fit => {
+    drawBottom();
+    if (!map) return;
+    cluster.clearLayers(); markers.clear();
+    const pts = filtered().filter(p => p.lat != null);
+    for (const p of pts) {
+      const m = L.marker([p.lat, p.lng], { icon: pinIcon(isBeen(p), p.id === sel) });
+      m.on('click', () => { const old = sel; sel = p.id; if (old) refreshIcon(old); refreshIcon(p.id); drawBottom(); });
+      markers.set(p.id, m); cluster.addLayer(m);
+    }
+    if (!fit) return;
+    const padTop = top.getBoundingClientRect().bottom + 70;
+    if (pts.length > 1) map.fitBounds(L.latLngBounds(pts.map(p => [p.lat, p.lng])), { paddingTopLeft: [40, padTop], paddingBottomRight: [40, 200], maxZoom: 16 });
+    else if (pts.length === 1) map.setView([pts[0].lat, pts[0].lng], 15);
+    else { const c = await groupCenter(g); if (map) map.setView([c.lat, c.lng], g.kind === 'trip' ? 5 : 12); }
+  };
+  drawFilter(); drawBottom();
+  $('[data-search]').addEventListener('input', e => { S.gfilter.q = e.target.value; sel = null; drawPins(false); });
+  loadLeaflet().then(() => {
+    const el = $('[data-map]'); if (!el) return; // уже ушли с экрана
+    map = newMap(el);
+    cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 44, iconCreateFunction: c => L.divIcon({ className: 'cluster', html: `<span>${c.getChildCount()}</span>`, iconSize: [44, 44] }) });
+    map.addLayer(cluster);
+    map.on('click', () => { if (sel) { const old = sel; sel = null; refreshIcon(old); drawBottom(); } });
+    drawPins(true);
+  }).catch(() => { const el = $('[data-map]'); if (el) el.innerHTML = '<p class="t-sub center" style="padding-top:260px">Карта не загрузилась — проверьте интернет</p>'; });
+  on('[data-me]', 'click', () => {
+    if (!navigator.geolocation) return toast('На этом устройстве геопозиция недоступна');
+    navigator.geolocation.getCurrentPosition(pos => {
+      if (!map) return;
+      const ll = [pos.coords.latitude, pos.coords.longitude];
+      if (meMarker) meMarker.setLatLng(ll);
+      else meMarker = L.marker(ll, { icon: L.divIcon({ className: 'me-dot', html: '<span></span>', iconSize: [22, 22] }), interactive: false, zIndexOffset: 2000 }).addTo(map);
+      map.flyTo(ll, 15);
+    }, () => toast('Не получилось определить, где вы — разрешите доступ к геопозиции'), { enableHighAccuracy: true, timeout: 10000 });
+  });
+}
+
+// Экран «Где это место?»: карта двигается, булавка стоит в центре
+function pickPoint({ lat, lng, title = '', onDone }) {
+  const ov = document.createElement('div');
+  ov.className = 'overlay picker';
+  ov.innerHTML = `<div class="picker-map" data-map></div><div class="picker-pin">${pinHTML(false, true)}</div>
+    <div class="picker-top"><button class="round shadow" data-close aria-label="Назад">${icon('back')}</button>
+      <div class="input white grow picker-addr">${icon('pin', 20)}<span class="grow" data-addr>Ищем адрес…</span></div></div>
+    <div class="sheet picker-sheet"><div class="stack-xs"><h2 class="h2">Где это место?</h2>
+      <span class="t-sub">${title ? esc(title) + ' — ' : ''}двигайте карту, булавка останется в центре</span></div>
+      <button class="btn" data-ok>Готово</button></div>`;
+  document.body.appendChild(ov);
+  let m = null, label = null, t = null;
+  const close = () => { try { m && m.remove(); } catch { /* нет */ } ov.remove(); setTimeout(tryRefresh, 50); };
+  ov.querySelector('[data-close]').onclick = close;
+  loadLeaflet().then(() => {
+    m = L.map(ov.querySelector('[data-map]'), { zoomControl: false }).setView([lat, lng], 16);
+    m.attributionControl.setPrefix(false);
+    L.tileLayer(TILES, { maxZoom: 19, attribution: TILES_ATTR }).addTo(m);
+    const findAddr = () => {
+      clearTimeout(t); label = null;
+      const el = ov.querySelector('[data-addr]'); if (el) el.textContent = 'Ищем адрес…';
+      t = setTimeout(async () => {
+        const c = m.getCenter(); label = await reverseGeocode(c.lat, c.lng);
+        const e2 = ov.querySelector('[data-addr]'); if (e2) e2.textContent = label || 'Точка выбрана';
+      }, 700);
+    };
+    m.on('movestart', () => { clearTimeout(t); });
+    m.on('moveend', findAddr); findAddr();
+  }).catch(() => { toast('Карта не загрузилась — проверьте интернет'); close(); });
+  ov.querySelector('[data-ok]').onclick = () => {
+    if (!m) return;
+    const c = m.getCenter(); close();
+    onDone({ lat: +c.lat.toFixed(6), lng: +c.lng.toFixed(6), label });
+  };
 }
 
 // =========================================================
@@ -723,8 +937,9 @@ function renderForm(id, q) {
     name: p?.name || '', group_id: p?.group_id || q.get('g') || cities()[0]?.id || S.groups[0].id,
     tags: [...(p?.tags || [])], instagram: p?.instagram || '', address: p?.address || '', note: p?.note || '',
     coverFile: null, coverUrl: null, coverRemoved: false,
+    lat: p?.lat ?? null, lng: p?.lng ?? null,
   };
-  const suggestions = () => [...new Set([...allTags(), ...F.tags, ...(allTags().length ? [] : ['кафе', 'выставки', 'природа', 'на выходные'])])];
+  const suggestions =() => [...new Set([...allTags(), ...F.tags, ...(allTags().length ? [] : ['кафе', 'выставки', 'природа', 'на выходные'])])];
   const coverSrc = () => F.coverUrl || (!F.coverRemoved && p?.cover_path ? url(p.cover_path) : null);
   const groupOptions = () => {
     const opt = g => `<option value="${g.id}" ${g.id === F.group_id ? 'selected' : ''}>${esc(g.name)}</option>`;
@@ -737,7 +952,7 @@ function renderForm(id, q) {
     <div class="field"><label>Группа</label><label class="input"><select data-f="group_id">${groupOptions()}</select>${icon('down', 20)}</label></div>
     <div class="field"><span class="label">Теги</span><div class="chips" data-tags></div></div>
     <div class="field"><label>Instagram</label><label class="input">${icon('insta', 20)}<input data-f="instagram" placeholder="@place или ссылка" value="${esc(F.instagram)}" autocapitalize="off"></label></div>
-    <div class="field"><label>Адрес</label><label class="input">${icon('pin', 20)}<input data-f="address" placeholder="Улица, дом или ссылка на карту" value="${esc(F.address)}"></label></div>
+    <div class="field"><label>Адрес</label><label class="input">${icon('pin', 20)}<input data-f="address" placeholder="Улица, дом или ссылка на карту" value="${esc(F.address)}"></label><div data-mapprev></div></div>
     <div class="field"><label>Заметка</label><textarea class="input" data-f="note" rows="3" placeholder="Что там интересного, когда лучше идти…">${esc(F.note)}</textarea></div>
   </div><div class="fade"></div><button class="btn cta" data-act="save">${p ? 'Сохранить' : 'Добавить место'}</button>`;
   on('[data-f]', 'input', (e, el) => { F[el.dataset.f] = el.value; });
@@ -773,13 +988,58 @@ function renderForm(id, q) {
       inp.addEventListener('blur', add);
     });
   };
-  drawCover(); drawTags();
+  // Точка на карте: превью, если координаты есть; иначе — найти по адресу или поставить вручную
+  const drawMapPrev = () => {
+    const box = $('[data-mapprev]'); if (!box) return;
+    const textAddr = F.address.trim() && !isUrl(F.address);
+    if (F.lat != null) {
+      box.innerHTML = `<div class="map-prev"><div class="map-prev-map" data-pm></div><div class="map-prev-pin">${pinHTML(false, true)}</div>
+        <button class="chip" data-adjust>уточнить на карте</button></div>`;
+      loadLeaflet().then(() => {
+        const el = box.querySelector('[data-pm]'); if (!el) return;
+        newMap(el, { dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false, boxZoom: false, keyboard: false }).setView([F.lat, F.lng], 16);
+      }).catch(() => {});
+    } else {
+      box.innerHTML = `<div class="chips" style="padding-top:8px">${textAddr ? `<button class="chip" data-find>${icon('search', 16)}найти на карте</button>` : ''}
+        <button class="chip" data-adjust>${icon('pin', 16)}поставить точку на карте</button></div>`;
+    }
+    box.querySelector('[data-adjust]').onclick = async e => {
+      e.currentTarget.disabled = true;
+      let c = F.lat != null ? { lat: F.lat, lng: F.lng } : null;
+      if (!c && textAddr) c = await coordsFor(F.address.trim(), F.group_id);
+      if (!c) { const g = groupById(F.group_id); c = g ? await groupCenter(g) : MINSK; }
+      e.currentTarget.disabled = false;
+      pickPoint({ ...c, title: F.name.trim(), onDone: ({ lat, lng, label }) => {
+        F.lat = lat; F.lng = lng;
+        if (!F.address.trim() && label) { F.address = label; $('[data-f=address]').value = label; }
+        drawMapPrev();
+      } });
+    };
+    box.querySelector('[data-find]')?.addEventListener('click', async e => {
+      e.currentTarget.disabled = true; e.currentTarget.lastChild.textContent = 'ищем…';
+      const c = await coordsFor(F.address.trim(), F.group_id);
+      if (c) { F.lat = c.lat; F.lng = c.lng; } else toast('Не нашли такой адрес — поставьте точку вручную');
+      drawMapPrev();
+    });
+  };
+  // адрес поменяли: ссылку на карту разбираем сразу, обычный адрес ищем на карте
+  on('[data-f=address]', 'change', async () => {
+    const a = F.address.trim();
+    F.lat = null; F.lng = null;
+    if (a) { const c = await coordsFor(a, F.group_id); if (c && F.address.trim() === a) { F.lat = c.lat; F.lng = c.lng; } }
+    drawMapPrev();
+  });
+  drawCover(); drawTags(); drawMapPrev();
   on('[data-act=save]', 'click', async (e, btn) => {
     if (!F.name.trim()) { toast('Напишите название места'); $('#f-name').focus(); return; }
     btn.disabled = true; btn.textContent = 'Сохраняем…';
     try {
       const row = { name: F.name.trim(), group_id: F.group_id, tags: F.tags, instagram: F.instagram.trim() || null, address: F.address.trim() || null, note: F.note.trim() || null };
-      if (!p || row.address !== (p.address || null)) { const c = isUrl(row.address) ? parseCoords(row.address) : null; row.lat = c?.lat ?? null; row.lng = c?.lng ?? null; }
+      row.lat = F.lat; row.lng = F.lng;
+      if (row.lat == null && row.address) { // точку ещё не нашли — пробуем по адресу (не дольше 6 секунд)
+        const c = await Promise.race([coordsFor(row.address, row.group_id), new Promise(r => setTimeout(() => r(null), 6000))]);
+        if (c) { row.lat = c.lat; row.lng = c.lng; }
+      }
       const oldCover = p?.cover_path;
       if (F.coverFile) row.cover_path = await uploadPhoto(F.coverFile);
       else if (F.coverRemoved) row.cover_path = null;
@@ -1157,7 +1417,7 @@ async function setSession(session) {
   app.innerHTML = '<div class="boot">Сходим?</div>';
   try {
     await loadSpace();
-    if (S.space) { await loadAll(); subscribe(); }
+    if (S.space) { await loadAll(); subscribe(); backfillCoords(); }
   } catch (e) { handleErr(e); }
   render();
 }
@@ -1179,6 +1439,9 @@ function seedDemo() {
     P('p7', 'g3', 'Колизей', ['музеи']),
     P('p8', 'g4', 'Серные бани', ['на выходные']),
   ];
+  // демо-координаты (у «Выставки керамики» точки нет — чтобы видеть подсказку на карте)
+  const LL = { p1: [53.9071, 27.5529], p3: [53.9155, 27.6118], p4: [53.9102, 27.5482], p5: [52.0976, 23.6877], p6: [52.0939, 23.7012], p7: [41.8902, 12.4922], p8: [41.688, 44.8104] };
+  for (const p of S.places) if (LL[p.id]) [p.lat, p.lng] = LL[p.id];
   const V = (id, pid, d, note) => ({ id, space_id: 'demo', place_id: pid, visited_on: d, note, created_at: '' });
   S.visits = [V('v1', 'p1', '2026-09-14', 'взяли фисташковый раф'), V('v2', 'p1', '2026-03-02', 'первый раз, сидели у окна'),
     V('v3', 'p3', '2026-11-09', null), V('v4', 'p5', '2026-10-26', 'булочки с корицей!'), V('v5', 'p4', '2026-10-03', null)];
@@ -1203,6 +1466,7 @@ function seedDemo() {
       pmenu: () => placeMenu(placeById(id)), delgroup: () => deleteGroupDialog(groupById(id)),
       vmenu: () => { const v = S.visits.find(x => x.id === id); visitMenu(placeById(v.place_id), v); },
       addtravel: () => addPlace(),
+      pick: () => pickPoint({ lat: 53.9071, lng: 27.5529, title: 'Кофейня «Зерно»', onDone: () => {} }),
       date: () => dateSheet({ value: '2026-09-14', sub: 'Кофейня «Зерно»', onPick: () => {} }), date2: () => dateSheet({ sub: 'Кофейня «Зерно»', onPick: () => {} }),
     }[what];
     open?.();

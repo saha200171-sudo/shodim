@@ -613,7 +613,8 @@ button.input { color: var(--ink); }
   .sheet { position: relative; }
   .sheet-x { display: grid; place-items: center; position: absolute; top: 18px; right: 18px; width: 40px; height: 40px; border-radius: 50%; background: var(--paper); color: var(--ink); z-index: 2; }
   .sheet-x:hover { background: var(--track); }
-  .sheet > .sheet-x + * { padding-right: 44px; } /* заголовок не залезает под крестик */
+  .sheet h2.h2:first-child { padding-right: 48px; } /* место под крестик — только у заголовка */
+  .sheet .center h2.h2:first-child { padding-right: 0; }
 }
 
 /* Форма места на компьютере: фото слева (остаётся на месте), поля справа, «Сохранить» — в конце полей */

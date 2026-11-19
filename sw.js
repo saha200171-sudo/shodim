@@ -1,6 +1,6 @@
 // Сервис-воркер: кэширует оболочку приложения, чтобы оно быстро открывалось.
 // Данные и фото всегда берутся из сети (Supabase).
-const VERSION = 'shodim-v21';
+const VERSION = 'shodim-v22';
 const SHELL = ['./', 'index.html', 'styles.css', 'js/app.js', 'js/config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -15,15 +15,20 @@ self.addEventListener('fetch', e => {
   // Своё приложение: сначала сеть мимо HTTP-кэша (GitHub Pages кэширует на 10 минут),
   // чтобы обновления приходили сразу; без сети — кэш
   if (u.origin === location.origin) {
+    const isPage = e.request.mode === 'navigate';
     e.respondWith(fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' }).then(r => {
-      const copy = r.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); return r;
-    }).catch(() => caches.match(e.request).then(r => r || caches.match('index.html'))));
+      // в кэш кладём только целые, правильные ответы — «сломанная» загрузка не должна запомниться
+      const okType = isPage || !/text\/html/.test(r.headers.get('content-type') || '');
+      if (r.ok && okType) { const copy = r.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); }
+      return r;
+    }).catch(() => caches.match(e.request).then(r => r || (isPage ? caches.match('index.html') : Response.error()))));
     return;
   }
   // Шрифты и библиотека Supabase с CDN: кэш, потом сеть
   if (/fonts\.(googleapis|gstatic)\.com|cdn\.jsdelivr\.net/.test(u.host)) {
     e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-      const copy = res.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); return res;
+      if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); }
+      return res;
     })));
   }
 });

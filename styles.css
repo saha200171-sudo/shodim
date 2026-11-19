@@ -627,3 +627,6 @@ button.input { color: var(--ink); }
   .field-photo .ph { height: auto !important; aspect-ratio: 4 / 3; border-radius: var(--r-card); }
   .screen.page > .cta, .app:has(.nav) .screen.page > .cta { position: static; transform: none; width: auto; justify-self: start; padding: 0 36px; }
 }
+
+/* заметки показываем с переносами строк, как их написали */
+.note .t-body, .visit .t-sub, .viewer-note, .map-card .t-sub { white-space: pre-line; }

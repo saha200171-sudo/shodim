@@ -2280,7 +2280,7 @@ function seedDemo() {
     G('g3', 'Италия', 'trip', 'sky', { trip_status: 'dream' }), G('g4', 'Грузия', 'trip', 'butter', { trip_status: 'planned', trip_start: '2027-05-10' })];
   const P = (id, gid, name, tags, extra = {}) => ({ id, space_id: 'demo', group_id: gid, name, tags, want_again: false, created_at: '', ...extra });
   S.places = [
-    P('p1', 'g1', 'Кофейня «Зерно»', ['кафе'], { kinds: ['cafe'], instagram: '@zerno.coffee', address: 'ул. Зыбицкая, 6', note: 'Говорят, тут лучшие круассаны в городе. Идти утром в выходные!', want_again: true }),
+    P('p1', 'g1', 'Кофейня «Зерно»', ['кафе'], { kinds: ['cafe'], instagram: '@zerno.coffee', address: 'ул. Зыбицкая, 6', note: 'Говорят, тут лучшие круассаны в городе.' + '\n' + 'Идти утром в выходные!', want_again: true }),
     P('p2', 'g1', 'Выставка керамики', ['выставки'], { kinds: ['art'], note: 'До 30 ноября' }),
     P('p3', 'g1', 'Ботанический сад', ['природа'], { kinds: ['nature'] }),
     P('p4', 'g1', 'Бар «Лампа»', ['на выходные'], { instagram: 'https://www.instagram.com/some.very.long.place.name.minsk/', address: 'https://yandex.by/maps/157/minsk/?ll=27.553463%2C53.897114&mode=poi&poi%5Bpoint%5D=27.553399%2C53.897201&poi%5Buri%5D=ymapsbm1%3A%2F%2Forg%3Foid%3D123', note: 'Оченьдлинноесловобезпробеловкотороенедолжновылезатьзакрайэкрана' }),

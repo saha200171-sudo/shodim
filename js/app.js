@@ -1050,14 +1050,14 @@ function renderTravel() {
   app.innerHTML = `<div class="screen">
     <div class="head"><div class="title"><button class="round" data-go="#/" aria-label="Назад">${icon('back')}</button>
       <div class="col"><h1 class="h1">Путешествия</h1><span class="hand-m accent" style="font-size:22px;line-height:24px">мечтаем и планируем</span></div></div></div>
-    ${ts.map(t => {
+    <div class="trips-grid">${ts.map(t => {
       const st = tripStatus(t), n = placesIn(t.id).length;
       return `<button class="card trip" data-tid="${t.id}" data-go="#/g/${t.id}">${photo(url(t.cover_path), t.cover_color || hashKey(t.id), { inner: `<span class="status" style="${st.cls ? `background:var(--${st.cls})` : ''}">${esc(st.text)}</span>
           <span class="round shadow trip-more" role="button" tabindex="0" data-tmenu="${t.id}" aria-label="Изменить или удалить поездку">${icon('more')}</span>` })}
         <span class="row between" style="padding:0 8px"><span class="t-sec">${esc(t.name)}</span><span class="t-sub">${n} ${plural(n, 'место', 'места', 'мест')}</span></span></button>`;
     }).join('')}
+    <button class="dashed trip-new" data-act="new-trip">${icon('plus', 20)}Новая поездка</button></div>
     ${ts.length ? '' : `<p class="t-body muted center" style="margin:16px 0 0">Здесь будут поездки — и те, о которых пока мечтаем, и уже запланированные.</p>`}
-    <button class="dashed" data-act="new-trip">${icon('plus', 20)}Новая поездка</button>
   </div>${navHTML('p')}`;
   bindCommon();
   on('[data-act=new-trip]', 'click', () => groupSheet(null, 'trip'));

@@ -477,6 +477,7 @@ button.input { color: var(--ink); }
    ========================================================= */
 .dream-halves { display: flex; flex-direction: column; gap: var(--sl); }
 .only-desk { display: none !important; }
+.trips-grid { display: flex; flex-direction: column; gap: var(--sl); }
 .trip-add { height: auto; min-height: 120px; }
 @media (min-width: 760px) {
   :root { --side: 40px; --top: 48px; }
@@ -487,6 +488,10 @@ button.input { color: var(--ink); }
   .gcard .ph { height: 140px; }
   .gcard.wide .ph { height: 120px; }
   .only-phone { display: none !important; }
+  /* «Путешествия»: по две поездки в ряд, каждая — половина строки (шире экран — шире карточка) */
+  .trips-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 20px; }
+  .trips-grid .trip .ph { height: auto; aspect-ratio: 16 / 7; }
+  .trips-grid .trip-new { height: auto; min-height: 120px; }
   .only-desk { display: flex !important; }
   .trip-add { min-height: 0; height: 100%; border-radius: var(--r-card); }
   .board { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 28px 24px; }

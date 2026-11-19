@@ -295,3 +295,23 @@ button.input { color: var(--ink); }
 .picker-addr .ic { color: var(--accent); }
 .picker-sheet { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 600; animation: none; }
 .picker .leaflet-bottom { bottom: 200px; }
+
+/* ---------- Просмотр фото ---------- */
+.overlay.viewer { flex-direction: column; justify-content: center; align-items: center; background: rgba(59, 51, 48, .62); padding: calc(76px + env(safe-area-inset-top)) 20px calc(96px + env(safe-area-inset-bottom)); }
+.viewer-top { position: fixed; top: calc(16px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 440px; display: flex; justify-content: space-between; align-items: center; z-index: 2; }
+.viewer-count { box-shadow: var(--shadow); }
+.viewer-bottom { position: fixed; bottom: calc(24px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 440px; display: flex; justify-content: space-between; align-items: center; z-index: 2; }
+.viewer-bottom .round:disabled { opacity: .35; }
+.viewer-place { box-shadow: var(--shadow); color: var(--ink); }
+.viewer-stage { width: 100%; max-width: 440px; flex: 1; display: flex; align-items: center; justify-content: center; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.viewer-pol { --tilt: -2deg; position: relative; background: var(--card); padding: 14px 14px 12px; box-shadow: 0 18px 40px rgba(30, 20, 15, .35);
+  width: min(100%, 400px); transform: rotate(var(--tilt)); transition: transform .32s cubic-bezier(.2, .8, .3, 1), opacity .32s; animation: vin .34s cubic-bezier(.2, .8, .3, 1); }
+.viewer-pol.from-right { transform: translateX(60%) rotate(8deg); opacity: 0; transition: none; }
+.viewer-pol.from-left { transform: translateX(-60%) rotate(-8deg); opacity: 0; transition: none; }
+.viewer-pol img { display: block; width: 100%; max-height: 56vh; object-fit: contain; background: var(--paper); border-radius: 3px; pointer-events: none; }
+.viewer-ph { width: 100%; aspect-ratio: 1; border-radius: 3px; }
+.viewer-pol .tape { position: absolute; top: -12px; left: 50%; width: 76px; height: 24px; margin-left: -38px; opacity: .88; transform: rotate(-4deg); }
+.viewer-cap { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding-top: 8px; }
+.viewer-note { color: var(--ink); max-height: 4.5em; overflow: hidden; }
+@keyframes vin { from { transform: scale(.6) rotate(calc(var(--tilt) - 6deg)); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .viewer-pol { animation: none; transition: none; } }

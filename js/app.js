@@ -1060,13 +1060,12 @@ function renderForm(id, q) {
 const TAPES = ['--butter', '--rose', '--sage', '--sky'];
 const TILT = [-3, 2.5, -2, 3.5];
 // Один полароид = одно фото. У всех фото одного визита — скотч одного цвета.
-function polaroidHTML({ v, src, tape }, i) {
+const shortName = name => name.match(/[«"]([^»"]+)[»"]/)?.[1] || name; // «Зерно» вместо «Кофейня «Зерно»»
+function polaroidHTML({ v, src, tape, gi }, i) {
   const p = placeById(v.place_id);
-  const name = p?.name || '';
-  const short = name.match(/[«"]([^»"]+)[»"]/)?.[1] || name; // «Зерно» вместо «Кофейня «Зерно»»
-  return `<button class="polaroid" data-go="#/p/${v.place_id}" style="transform:rotate(${TILT[i % 4]}deg)">
+  return `<button class="polaroid" data-ph="${gi}" style="transform:rotate(${TILT[i % 4]}deg)">
     <span class="tape" style="background:var(${TAPES[tape % TAPES.length]})"></span>
-    ${photo(src, hashKey(v.id))}<span class="hand-s"><span class="nm">${esc(short)}</span>, ${fmtShort(v.visited_on)}</span></button>`;
+    ${photo(src, hashKey(v.id))}<span class="hand-s"><span class="nm">${esc(shortName(p?.name || ''))}</span>, ${fmtShort(v.visited_on)}</span></button>`;
 }
 function albumCards(visits) {
   return visits.flatMap((v, vi) => {
@@ -1088,6 +1087,9 @@ function renderAlbum(q) {
   const months = [];
   for (const v of vs) { const k = v.visited_on.slice(0, 7); let m = months.find(x => x.k === k); if (!m) months.push(m = { k, items: [] }); m.items.push(v); }
   const chips = [['all', 'Все'], ...cities().map(g => [g.id, g.name]), ...(trips().length ? [['travel', 'Путешествия']] : [])];
+  // все карточки альбома по порядку — для листания в просмотре фото
+  const list = [];
+  for (const m of months) { m.cards = albumCards(m.items).map(c => { c.gi = list.length; c.tilt = TILT[list.length % 4]; list.push(c); return c; }); }
   app.innerHTML = `<div class="screen">
     <div class="col"><span class="hand-m accent">наши воспоминания</span><h1 class="h1">Альбом</h1></div>
     ${all.length ? `<div class="chips">${chips.map(([k, n]) => `<button class="chip ${f === k ? 'active' : ''}" data-go="#/album${k === 'all' ? '' : '?f=' + k}">${esc(n)}</button>`).join('')}</div>` : ''}
@@ -1098,9 +1100,69 @@ function renderAlbum(q) {
         <button class="btn" data-go="#/">К нашим местам</button></div>`
       : !vs.length ? `<p class="t-sub center" style="margin:24px 0">Здесь пока нет визитов</p>`
       : months.map(m => `<div class="month"><div class="mh"><span class="hand-l">${fmtMonth(m.k)}</span><span class="t-sub">${m.items.length} ${plural(m.items.length, 'визит', 'визита', 'визитов')}</span></div>
-          <div class="board">${albumCards(m.items).map(polaroidHTML).join('')}</div></div>`).join('')}
+          <div class="board">${m.cards.map(polaroidHTML).join('')}</div></div>`).join('')}
   </div>${navHTML('a')}`;
   bindCommon();
+  on('[data-ph]', 'click', (e, el) => openViewer(list, +el.dataset.ph));
+}
+
+// ----- Просмотр фото: полароид увеличивается, листается свайпом / стрелками
+function openViewer(list, start) {
+  if (!list.length) return;
+  let i = start;
+  const ov = document.createElement('div');
+  ov.className = 'overlay viewer';
+  ov.innerHTML = `<div class="viewer-top"><span class="chip viewer-count" data-count></span><button class="round shadow" data-x aria-label="Закрыть">${icon('close')}</button></div>
+    <div class="viewer-stage" data-stage></div>
+    <div class="viewer-bottom"><button class="round shadow" data-prev aria-label="Предыдущее">${icon('back')}</button>
+      <button class="chip viewer-place" data-place>к месту ${icon('right', 16)}</button>
+      <button class="round shadow" data-next aria-label="Следующее">${icon('right')}</button></div>`;
+  document.body.appendChild(ov);
+  const stage = ov.querySelector('[data-stage]');
+  history.pushState({ viewer: 1 }, '');
+  let closed = false;
+  const finish = () => { if (closed) return; closed = true; window.removeEventListener('popstate', onPop); document.removeEventListener('keydown', onKey); ov.remove(); setTimeout(tryRefresh, 50); };
+  const onPop = () => finish();
+  const close = () => { if (history.state?.viewer) history.back(); else finish(); };
+  window.addEventListener('popstate', onPop);
+  const card = (c) => {
+    const p = placeById(c.v.place_id);
+    return `<div class="viewer-pol" style="--tilt:${c.tilt}deg"><span class="tape" style="background:var(${TAPES[c.tape % TAPES.length]})"></span>
+      ${c.src ? `<img src="${esc(c.src)}" alt="" draggable="false">` : `<div class="ph viewer-ph">${art(hashKey(c.v.id))}</div>`}
+      <div class="viewer-cap"><span class="hand-l">${esc(shortName(p?.name || ''))}</span><span class="t-sub">${fmtDate(c.v.visited_on)}</span>
+      ${c.v.note ? `<span class="t-body viewer-note">${esc(c.v.note)}</span>` : ''}</div></div>`;
+  };
+  const draw = (dir = 0) => {
+    const c = list[i];
+    stage.innerHTML = card(c);
+    const pol = stage.firstElementChild;
+    if (dir) { pol.classList.add(dir > 0 ? 'from-right' : 'from-left'); requestAnimationFrame(() => requestAnimationFrame(() => pol.classList.remove('from-right', 'from-left'))); }
+    ov.querySelector('[data-count]').textContent = `${i + 1} из ${list.length}`;
+    ov.querySelector('[data-prev]').disabled = i === 0;
+    ov.querySelector('[data-next]').disabled = i === list.length - 1;
+    // подгружаем соседние фото заранее
+    for (const j of [i - 1, i + 1]) if (list[j]?.src) { const im = new Image(); im.src = list[j].src; }
+  };
+  const step = d => { const j = i + d; if (j < 0 || j >= list.length) return false; i = j; draw(d); return true; };
+  ov.querySelector('[data-x]').onclick = close;
+  ov.querySelector('[data-prev]').onclick = () => step(-1);
+  ov.querySelector('[data-next]').onclick = () => step(1);
+  ov.querySelector('[data-place]').onclick = () => { const pid = list[i].v.place_id; finish(); history.replaceState(null, ''); go('#/p/' + pid); };
+  ov.addEventListener('click', e => { if (e.target === ov || e.target === stage) close(); });
+  const onKey = e => { if (e.key === 'ArrowRight') step(1); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  // свайп
+  let x0 = null, dx = 0;
+  stage.addEventListener('pointerdown', e => { x0 = e.clientX; dx = 0; stage.setPointerCapture(e.pointerId); const pol = stage.firstElementChild; if (pol) pol.style.transition = 'none'; });
+  stage.addEventListener('pointermove', e => { if (x0 == null) return; dx = e.clientX - x0; const pol = stage.firstElementChild; if (pol) pol.style.transform = `translateX(${dx}px) rotate(calc(var(--tilt) + ${dx / 25}deg))`; });
+  const end = () => {
+    if (x0 == null) return; x0 = null;
+    const pol = stage.firstElementChild; if (pol) { pol.style.transition = ''; pol.style.transform = ''; }
+    if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1);
+    else if (Math.abs(dx) < 6) { /* просто тап — ничего */ }
+  };
+  stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
+  draw(0);
 }
 
 // =========================================================
@@ -1495,7 +1557,7 @@ function seedDemo() {
       newgroup: () => groupSheet(null, 'city'), newtrip: () => groupSheet(null, 'trip'), gmenu: () => groupMenu(groupById(id)),
       pmenu: () => placeMenu(placeById(id)), delgroup: () => deleteGroupDialog(groupById(id)),
       vmenu: () => { const v = S.visits.find(x => x.id === id); visitMenu(placeById(v.place_id), v); },
-      addtravel: () => addPlace(), switch: () => switchSpaceSheet(),
+      addtravel: () => addPlace(), switch: () => switchSpaceSheet(), viewer: () => document.querySelector('[data-ph="1"]')?.click(),
       pick: () => pickPoint({ lat: 53.9071, lng: 27.5529, title: 'Кофейня «Зерно»', onDone: () => {} }),
       date: () => dateSheet({ value: '2026-09-14', sub: 'Кофейня «Зерно»', onPick: () => {} }), date2: () => dateSheet({ sub: 'Кофейня «Зерно»', onPick: () => {} }),
     }[what];

@@ -517,7 +517,11 @@ button.input { color: var(--ink); }
   .hero .bar { left: max(40px, calc(50% - 380px)); right: max(40px, calc(50% - 380px)); }
   /* шторки — окном по центру */
   .overlay { align-items: center; padding: 24px; }
-  .sheet { max-width: 520px; border-radius: var(--r-sheet); max-height: 88vh; padding-bottom: 24px; }
+  .sheet { max-width: 520px; border-radius: var(--r-sheet); max-height: 88vh; padding: 28px 28px 28px; overscroll-behavior: contain;
+    scrollbar-width: thin; scrollbar-color: var(--dash) transparent; } /* тонкая полоса прокрутки без стрелок, внутри скруглений */
+  .sheet::-webkit-scrollbar { width: 8px; }
+  .sheet::-webkit-scrollbar-thumb { background: var(--dash); border-radius: 4px; border: 2px solid var(--card); }
+  .sheet::-webkit-scrollbar-track { background: transparent; margin: 20px 0; }
   .sheet .handle { display: none; }
   .overlay.picker { padding: 0; }
   .picker-sheet { border-radius: var(--r-sheet) var(--r-sheet) 0 0; }

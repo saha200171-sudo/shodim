@@ -1128,7 +1128,7 @@ function openViewer(list, start) {
   const card = (c) => {
     const p = placeById(c.v.place_id);
     return `<div class="viewer-pol" style="--tilt:${c.tilt}deg"><span class="tape" style="background:var(${TAPES[c.tape % TAPES.length]})"></span>
-      ${c.src ? `<img src="${esc(c.src)}" alt="" draggable="false">` : `<div class="ph viewer-ph">${art(hashKey(c.v.id))}</div>`}
+      ${c.src ? `<img src="${esc(c.src)}" alt="" draggable="false" onload="if(this.naturalHeight>this.naturalWidth*1.05)this.classList.add('tall')">` : `<div class="ph viewer-ph">${art(hashKey(c.v.id))}</div>`}
       <div class="viewer-cap"><span class="hand-l">${esc(shortName(p?.name || ''))}</span><span class="t-sub">${fmtDate(c.v.visited_on)}</span>
       ${c.v.note ? `<span class="t-body viewer-note">${esc(c.v.note)}</span>` : ''}</div></div>`;
   };
@@ -1544,7 +1544,7 @@ function seedDemo() {
   };
   const F = (id, vid, path, n) => ({ id, space_id: 'demo', visit_id: vid, path, sort_order: n });
   S.photos = [F('f1', 'v3', fake('a', '#CFE0C3', '#8FAE82'), 0), F('f2', 'v3', fake('b', '#E4EEDD', '#B5CBA8'), 1), F('f3', 'v3', fake('c', '#D3E0C9', '#6F8A64'), 2),
-    F('f4', 'v4', fake('d', '#F8E4E5', '#DDAEB2'), 0), F('f5', 'v4', fake('e', '#FBF2D8', '#E5CF8E'), 1)];
+    F('f4', 'v4', fake('d', '#F8E4E5', '#DDAEB2'), 0), F('f5', 'v4', fake('e', '#FBF2D8', '#E5CF8E'), 1), F('f6', 'v1', (S.urls.set('demo/tall', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="540"><rect width="300" height="540" fill="#CFDDE6"/><circle cx="150" cy="170" r="60" fill="#F0CFD1"/><rect x="80" y="250" width="140" height="220" rx="40" fill="#8FB3CC"/></svg>')), 'demo/tall'), 0)];
 }
 
 (async function init() {
@@ -1557,7 +1557,7 @@ function seedDemo() {
       newgroup: () => groupSheet(null, 'city'), newtrip: () => groupSheet(null, 'trip'), gmenu: () => groupMenu(groupById(id)),
       pmenu: () => placeMenu(placeById(id)), delgroup: () => deleteGroupDialog(groupById(id)),
       vmenu: () => { const v = S.visits.find(x => x.id === id); visitMenu(placeById(v.place_id), v); },
-      addtravel: () => addPlace(), switch: () => switchSpaceSheet(), viewer: () => document.querySelector('[data-ph="1"]')?.click(),
+      addtravel: () => addPlace(), switch: () => switchSpaceSheet(), viewer: () => document.querySelector('[data-ph="1"]')?.click(), viewer2: () => { const v = [...document.querySelectorAll('[data-ph]')]; v[v.length - 2]?.click(); },
       pick: () => pickPoint({ lat: 53.9071, lng: 27.5529, title: 'Кофейня «Зерно»', onDone: () => {} }),
       date: () => dateSheet({ value: '2026-09-14', sub: 'Кофейня «Зерно»', onPick: () => {} }), date2: () => dateSheet({ sub: 'Кофейня «Зерно»', onPick: () => {} }),
     }[what];

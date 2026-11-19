@@ -139,7 +139,7 @@ input.input::placeholder, textarea.input::placeholder, .input input::placeholder
 .hero .ph .sun { right: auto; left: 54%; top: 34%; height: 20%; }
 .hero .bar { position: absolute; left: 20px; right: 20px; top: var(--top); display: flex; justify-content: space-between; z-index: 2; }
 .hero .bar .acts { display: flex; gap: 8px; }
-.sheetlike { position: relative; margin-top: -80px; background: var(--paper); border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: 24px 20px 150px; display: flex; flex-direction: column; gap: var(--sl); z-index: 1; }
+.sheetlike { position: relative; margin-top: -80px; background: var(--paper); border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: 24px 20px 150px; display: flex; flex-direction: column; gap: var(--sl); } /* без z-index: кнопка «Мы тут были!» внутри должна быть поверх нижнего затухания */
 .info { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: none; }
 .info hr { border: 0; border-top: 1px solid var(--line); margin: 0; }
 .irow { display: flex; align-items: center; gap: 12px; }
@@ -583,4 +583,13 @@ button.input { color: var(--ink); }
   /* «Комната мечты»: прогресс и кнопка в один ряд, кнопка — по ширине текста */
   .dream-foot { flex-direction: row; align-items: center; gap: 24px; }
   .dream-foot .btn { width: auto; flex: none; padding: 0 36px; }
+}
+
+/* Карточка места на компьютере: фото слева (остаётся на месте), информация справа */
+@media (min-width: 1024px) {
+  .place-wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 40px; align-items: start; padding: var(--top) 40px 80px; }
+  .place-wrap .hero { position: sticky; top: var(--top); height: auto; aspect-ratio: 4 / 3; border-radius: var(--r-card); overflow: hidden; box-shadow: var(--shadow); }
+  .place-wrap .hero .bar, .app:has(.nav) .place-wrap .hero .bar { left: 16px; right: 16px; top: 16px; }
+  .place-wrap .sheetlike { margin: 0; padding: 0; background: none; border-radius: 0; max-width: none; z-index: auto; }
+  .place-wrap .cta, .app:has(.nav) .place-wrap .cta { position: static; transform: none; width: auto; align-self: flex-start; padding: 0 36px; margin-top: 4px; }
 }

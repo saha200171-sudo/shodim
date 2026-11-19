@@ -1133,7 +1133,7 @@ function renderPlace(id) {
   const gallery = [];
   vs.forEach((v, vi) => photosOf(v.id).forEach(f => gallery.push({ v, src: url(f.path), tape: vi, tilt: TILT[gallery.length % 4], gi: gallery.length })));
   const MAXG = 6, shown = gallery.length > MAXG ? gallery.slice(0, MAXG - 1) : gallery, more = gallery.length - shown.length;
-  app.innerHTML = `<div class="hero">${photo(placeImg(p), hashKey(p.id))}
+  app.innerHTML = `<div class="place-wrap"><div class="hero">${photo(placeImg(p), hashKey(p.id))}
       <div class="bar"><button class="round shadow" data-go="${backTo}" aria-label="Назад">${icon('back')}</button>
       <div class="acts"><button class="round shadow" data-act="heart" aria-label="Хотим снова" style="color:var(--accent)">${icon(p.want_again ? 'heartF' : 'heart')}</button>
       <button class="round shadow" data-act="more" aria-label="Ещё">${icon('more')}</button></div></div></div>
@@ -1157,9 +1157,9 @@ function renderPlace(id) {
         <span class="col grow"><span class="t-bold">${fmtDate(v.visited_on)}</span>${v.note ? `<span class="t-sub">${esc(v.note)}</span>` : ''}</span></button>`).join('')}</div>`
         : `<p class="t-sub" style="margin:0">Ещё не были. Когда сходите — нажмите кнопку внизу и добавьте дату и фото.</p>`}
       </div>
-    </div>
-    <div class="fade"></div>
-    <button class="btn cta" data-act="visit">${icon('check')}Мы тут были!</button>${deskNav('p')}`;
+      <button class="btn cta" data-act="visit">${icon('check')}Мы тут были!</button>
+    </div></div>
+    <div class="fade"></div>${deskNav('p')}`;
   bindCommon();
   on('[data-act=heart]', 'click', async () => {
     try { await upd('places', p.id, { want_again: !p.want_again }); toast(p.want_again ? 'Отметили: хотим сюда снова' : 'Убрали из «хотим снова»'); renderPlace(id); }

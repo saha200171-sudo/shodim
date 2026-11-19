@@ -630,3 +630,8 @@ button.input { color: var(--ink); }
 
 /* заметки показываем с переносами строк, как их написали */
 .note .t-body, .visit .t-sub, .viewer-note, .map-card .t-sub { white-space: pre-line; }
+
+@media (min-width: 1024px) {
+  /* меню слева — снизу запас под нижнюю панель не нужен */
+  .app:has(.nav) .screen { padding-bottom: 56px; }
+}

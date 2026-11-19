@@ -891,6 +891,10 @@ function renderPlace(id) {
   const g = groupById(p.group_id), vs = visitsOf(p.id);
   const ig = p.instagram ? instaInfo(p.instagram) : null;
   const backTo = `#/g/${p.group_id}${vs.length && !p.want_again ? '?tab=been' : ''}`;
+  // все фото этого места со всех визитов (новые сверху) — для мини-галереи и просмотра
+  const gallery = [];
+  vs.forEach((v, vi) => photosOf(v.id).forEach(f => gallery.push({ v, src: url(f.path), tape: vi, tilt: TILT[gallery.length % 4], gi: gallery.length })));
+  const MAXG = 6, shown = gallery.length > MAXG ? gallery.slice(0, MAXG - 1) : gallery, more = gallery.length - shown.length;
   app.innerHTML = `<div class="hero">${photo(placeImg(p), hashKey(p.id))}
       <div class="bar"><button class="round shadow" data-go="${backTo}" aria-label="Назад">${icon('back')}</button>
       <div class="acts"><button class="round shadow" data-act="heart" aria-label="Хотим снова" style="color:var(--accent)">${icon(p.want_again ? 'heartF' : 'heart')}</button>
@@ -904,6 +908,11 @@ function renderPlace(id) {
         ${p.address ? `<a class="irow" href="${esc(mapHref(p))}" target="_blank" rel="noopener"><span class="bubble" style="background:var(--sage)">${icon('pin', 20)}</span><span class="col grow"><span class="t-sub">${isUrl(p.address) ? 'Карта' : 'Адрес'}</span><span class="t-bold">${esc(isUrl(p.address) ? mapLabel(p.address) : p.address)}</span></span><span class="ext">${icon('ext', 20)}</span></a>` : ''}
       </div>` : ''}
       ${p.note ? `<div class="note"><div class="hand-m">заметка</div><div class="t-body">${esc(p.note)}</div></div>` : ''}
+      ${gallery.length ? `<div class="stack-s">
+        <div class="row" style="gap:8px"><h2 class="t-sec">Наши фото</h2><span class="t-sec muted">${gallery.length}</span></div>
+        <div class="mini-gal">${shown.map(c => `<button class="mini-pol" data-gph="${c.gi}" style="transform:rotate(${c.tilt}deg)"><span class="tape" style="background:var(${TAPES[c.tape % TAPES.length]})"></span><img src="${esc(c.src)}" alt="" loading="lazy"></button>`).join('')}
+          ${more ? `<button class="mini-pol mini-more" data-gph="${shown.length}" style="transform:rotate(${TILT[shown.length % 4]}deg)"><span class="hand-m">ещё ${more}</span></button>` : ''}</div>
+      </div>` : ''}
       <div class="stack-s">
       <div class="row" style="gap:8px"><h2 class="t-sec">Наши визиты</h2>${vs.length ? `<span class="t-sec muted">${vs.length}</span>` : ''}</div>
       ${vs.length ? `<div class="col" style="gap:8px">${vs.map(v => `<button class="card visit" data-vid="${v.id}">${photo(visitImg(v), hashKey(v.id))}
@@ -920,6 +929,7 @@ function renderPlace(id) {
   });
   on('[data-act=more]', 'click', () => placeMenu(p));
   on('[data-act=visit]', 'click', () => visitSheet(p, null));
+  on('[data-gph]', 'click', (e, el) => openViewer(gallery, +el.dataset.gph));
   on('[data-vid]', 'click', (e, el) => {
     if (el.dataset.lp === '1') { delete el.dataset.lp; return; } // это было долгое нажатие
     visitSheet(p, S.visits.find(v => v.id === el.dataset.vid));

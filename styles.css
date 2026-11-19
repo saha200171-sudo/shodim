@@ -317,3 +317,10 @@ button.input { color: var(--ink); }
 .viewer-note { color: var(--ink); max-height: 4.5em; overflow: hidden; }
 @keyframes vin { from { transform: scale(.6) rotate(calc(var(--tilt) - 6deg)); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .viewer-pol { animation: none; transition: none; } }
+
+/* ---------- Мини-галерея в карточке места ---------- */
+.mini-gal { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 12px; padding: 10px 2px 4px; }
+.mini-pol { position: relative; background: var(--card); padding: 5px 5px 14px; box-shadow: var(--shadow); display: block; width: 100%; }
+.mini-pol img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 2px; }
+.mini-pol .tape { position: absolute; top: -7px; left: 50%; width: 34px; height: 12px; margin-left: -17px; opacity: .85; transform: rotate(-5deg); }
+.mini-more { display: grid; place-items: center; aspect-ratio: 1 / 1.12; background: var(--paper); border: 1.5px dashed var(--dash); box-shadow: none; color: var(--accent); }

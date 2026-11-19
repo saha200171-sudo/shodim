@@ -1,8 +1,9 @@
-<svg width="44" height="49" viewBox="0 0 44 49" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M26 42C38 39.3333 42.6667 32.6667 40 22" stroke-width="5" stroke-linecap="round" stroke="#8C817A"/>
+<svg width="50" height="53" viewBox="-2 -4 50 53" fill="none" xmlns="http://www.w3.org/2000/svg">
+<style>.tail{transform-box:view-box;transform-origin:27px 41px;animation:tail 3.2s ease-in-out infinite}@keyframes tail{0%,100%{transform:rotate(0)}30%{transform:rotate(-14deg)}60%{transform:rotate(6deg)}}.earL{transform-box:view-box;transform-origin:8px 9px;animation:earL 5s ease-in-out infinite}.earR{transform-box:view-box;transform-origin:20px 9px;animation:earR 7s ease-in-out infinite}@keyframes earL{0%,70%,100%{transform:rotate(0)}74%{transform:rotate(-16deg)}78%{transform:rotate(4deg)}82%{transform:rotate(-10deg)}86%{transform:rotate(0)}}@keyframes earR{0%,40%,100%{transform:rotate(0)}44%{transform:rotate(16deg)}48%{transform:rotate(-4deg)}52%{transform:rotate(0)}}@media (prefers-reduced-motion:reduce){.tail,.earL,.earR{animation:none}}</style>
+<path class="tail" d="M26 42C38 39.3333 42.6667 32.6667 40 22" stroke-width="5" stroke-linecap="round" stroke="#8C817A"/>
 <path d="M16 49C24.8366 49 32 43.1797 32 36C32 28.8203 24.8366 23 16 23C7.16344 23 0 28.8203 0 36C0 43.1797 7.16344 49 16 49Z" fill="#8C817A"/>
 <path d="M14 27C20.0751 27 25 22.0751 25 16C25 9.92487 20.0751 5 14 5C7.92487 5 3 9.92487 3 16C3 22.0751 7.92487 27 14 27Z" fill="#8C817A"/>
-<path d="M5 10L6 0L12 6L5 10ZM23 10L22 0L16 6L23 10Z" fill="#8C817A"/>
+<path class="earL" d="M5 10L6 0L12 6L5 10Z" fill="#8C817A"/><path class="earR" d="M23 10L22 0L16 6L23 10Z" fill="#8C817A"/>
 <path d="M8 17C9.33333 18.3333 10.6667 18.3333 12 17M16 17C17.3333 18.3333 18.6667 18.3333 20 17" stroke-width="1.5" stroke-linecap="round" stroke="white"/>
 <path d="M13.9998 22.2001C14.6625 22.2001 15.1998 21.6628 15.1998 21.0001C15.1998 20.3373 14.6625 19.8 13.9998 19.8C13.3371 19.8 12.7998 20.3373 12.7998 21.0001C12.7998 21.6628 13.3371 22.2001 13.9998 22.2001Z" fill="#F0CFD1"/>
 </svg>

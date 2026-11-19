@@ -65,7 +65,7 @@ export const ITEMS = [
   I('table', 'Столик', 'table', [140, 228.7, 80, 69.3], 52, { price: 5, cat: 'floor', tile: 'butter', note: 'с двумя айс-латте' }),
   I('monstera', 'Монстера', 'floorR', [260.8, 173, 88.5, 123], 51, { price: 4, cat: 'floor', tile: 'butter' }),
   I('torch', 'Торшер', 'floorR', [268, 176, 76, 119], 51, { price: 4, cat: 'floor', tile: 'peach' }),
-  I('cat', 'Кот', 'pet', [232, 258, 43.2, 49], 60, { trophy: 'fifty', cat: 'floor', tile: 'lav', note: 'живёт в комнате' }),
+  I('cat', 'Кот', 'pet', [230, 254, 50, 53], 60, { trophy: 'fifty', cat: 'floor', tile: 'lav', note: 'живёт в комнате' }),
   // --- кинозона (правая половина)
   I('film', 'Проектор', 'film', [398, 80, 136, 74], 23, { trophy: 'cinema10', cat: 'cinema', tile: 'lav', note: 'включает плёнку на экране' }),
   I('bluerug', 'Синий ковёр', 'rugR', [352, 292, 236, 26], 41, { price: 4, cat: 'cinema', tile: 'peach', note: 'под креслами-мешками' }),

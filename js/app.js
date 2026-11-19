@@ -520,8 +520,9 @@ function renderHome() {
       <button class="card gcard wide" data-go="#/travel">
         ${photo(ts[0] ? url(ts[0].cover_path) : null, ts[0]?.cover_color || 'sky')}
         <span class="cap"><span class="t-card">Путешествия</span>
-        <span class="t-sub">${ts.length ? `${ts.length} ${plural(ts.length, 'поездка', 'поездки', 'поездок')}` : 'пока без поездок — можно помечтать'}</span>
-        ${ts.length ? `<span class="chips" style="padding-top:8px">${ts.slice(0, 3).map(t => `<span class="chip paper">${esc(t.name)}</span>`).join('')}</span>` : ''}</span></button>
+        <span class="t-sub">${ts.length
+          ? `${ts.filter(t => t.trip_status !== 'done').length} в планах · ${ts.filter(t => t.trip_status === 'done').length} съездили` // как у городов: «хотим · были»
+          : 'пока без поездок — можно помечтать'}</span></span></button>
     </div></div>${navHTML('p')}`;
   bindCommon();
   on('[data-act=new-group]', 'click', () => groupSheet(null, 'city'));

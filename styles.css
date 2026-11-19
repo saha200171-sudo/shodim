@@ -162,7 +162,7 @@ input.input::placeholder, textarea.input::placeholder, .input input::placeholder
 
 /* ---------- Альбом ---------- */
 .month { display: flex; flex-direction: column; gap: 4px; }
-.month .mh { display: flex; align-items: center; gap: 10px; }
+.month .mh { display: flex; align-items: baseline; gap: 10px; } /* «3 визита» на одной линии с месяцем */
 .board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 16px; padding: 14px 4px 4px; }
 .polaroid { background: var(--card); padding: 10px 10px 6px; box-shadow: var(--shadow); position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .polaroid .ph { width: 100%; aspect-ratio: 1; border-radius: 3px; }

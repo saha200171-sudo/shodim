@@ -537,6 +537,7 @@ button.input { color: var(--ink); }
 /* ---------- Компьютер (от 1024 px): меню колонкой слева ---------- */
 .nav-brand, .plus-label { display: none; }
 .desk-nav { display: none; }
+.sheet-x { display: none; }
 .dream-foot { display: flex; flex-direction: column; gap: var(--sl); }
 @media (min-width: 1024px) {
   .app:has(.nav) { padding-left: 248px; max-width: calc(1180px + 248px); }
@@ -605,4 +606,12 @@ button.input { color: var(--ink); }
   .cal-day { height: 36px; }
   .cal-wd { padding: 4px 0; }
   .cal { gap: 4px; }
+}
+
+@media (min-width: 760px) {
+  /* крестик в окнах на компьютере */
+  .sheet { position: relative; }
+  .sheet-x { display: grid; place-items: center; position: absolute; top: 18px; right: 18px; width: 40px; height: 40px; border-radius: 50%; background: var(--paper); color: var(--ink); z-index: 2; }
+  .sheet-x:hover { background: var(--track); }
+  .sheet > .sheet-x + * { padding-right: 44px; } /* заголовок не залезает под крестик */
 }

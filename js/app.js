@@ -822,8 +822,8 @@ function placeMapFilter(top, mf) {
   const r = top.getBoundingClientRect();
   mf.style.left = ''; mf.style.top = (r.bottom + 12) + 'px';
   if (wideMap()) {
-    const left = r.right + 16, need = mf.scrollWidth;
-    if (left + need + 24 <= innerWidth) { mf.style.left = left + 'px'; mf.style.top = r.top + 'px'; }
+    const need = mf.scrollWidth, left = innerWidth - 24 - need; // к правому краю карты
+    if (left >= r.right + 16) { mf.style.left = left + 'px'; mf.style.top = r.top + 'px'; }
   }
   return true;
 }
@@ -1993,12 +1993,13 @@ async function checkStorageWarning() {
 function openSheet(html, { center = false, onClose } = {}) {
   const ov = document.createElement('div');
   ov.className = 'overlay' + (center ? ' mid' : '');
-  ov.innerHTML = center ? `<div class="dialog">${html}</div>` : `<div class="sheet"><div class="handle"></div>${html}</div>`;
+  ov.innerHTML = center ? `<div class="dialog">${html}</div>` : `<div class="sheet"><div class="handle"></div><button class="sheet-x" data-sheet-x aria-label="Закрыть">${icon('close', 20)}</button>${html}</div>`;
   document.body.appendChild(ov);
   const box = ov.firstElementChild;
   let closed = false;
   const close = () => { if (closed) return; closed = true; ov.remove(); onClose?.(); setTimeout(tryRefresh, 50); };
   ov.addEventListener('click', e => { if (e.target === ov) close(); });
+  box.querySelector(':scope > [data-sheet-x]')?.addEventListener('click', close);
   return { el: box, close };
 }
 function confirmDialog(title, text, okText = 'Удалить') {

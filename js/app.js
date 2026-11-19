@@ -1021,7 +1021,8 @@ function pickPoint({ lat, lng, title = '', query = '', kind = 'city', onDone }) 
   ov.className = 'overlay picker';
   ov.innerHTML = `<div class="picker-map" data-map></div><div class="picker-pin">${pinHTML(false, true)}</div>
     <div class="picker-top"><div class="row" style="gap:8px"><button class="round shadow" data-close aria-label="Назад">${icon('back')}</button>
-      <label class="input white grow picker-addr">${icon('search', 20)}<input type="search" data-q placeholder="Найти адрес или место" value="${esc(query)}" enterkeyhint="search"></label></div>
+      <label class="input white grow picker-addr">${icon('search', 20)}<input type="search" data-q placeholder="Найти адрес или место" value="${esc(query)}" enterkeyhint="search">
+        <button type="button" class="q-clear" data-qclear aria-label="Стереть" ${query ? '' : 'hidden'}>${icon('close', 18)}</button></label></div>
       <div class="picker-res card" data-res hidden></div></div>
     <div class="sheet picker-sheet"><div class="stack-xs"><h2 class="h2">Где это место?</h2>
       <span class="t-sub">${title ? esc(title) + ' — ' : ''}найдите в поиске или двигайте карту, булавка останется в центре</span>
@@ -1044,7 +1045,9 @@ function pickPoint({ lat, lng, title = '', query = '', kind = 'city', onDone }) 
     }).join('') : `<p class="t-sub" style="margin:0;padding:12px 16px">Ничего не нашли — попробуйте иначе (улица и дом) или подвиньте карту вручную</p>`;
     res.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { const r = list[+b.dataset.i]; res.hidden = true; qi.blur(); if (m) m.setView([r.lat, r.lng], 17); });
   };
-  qi.addEventListener('input', () => { clearTimeout(st); st = setTimeout(runSearch, 650); });
+  const qc = ov.querySelector('[data-qclear]');
+  qi.addEventListener('input', () => { qc.hidden = !qi.value; clearTimeout(st); st = setTimeout(runSearch, 650); });
+  qc.addEventListener('click', e => { e.preventDefault(); qi.value = ''; qc.hidden = true; res.hidden = true; seq++; qi.focus(); });
   qi.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(st); runSearch(); } });
   let m = null, label = null, t = null;
   const close = () => { try { m && m.remove(); } catch { /* нет */ } ov.remove(); setTimeout(tryRefresh, 50); };

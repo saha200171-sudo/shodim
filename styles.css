@@ -643,3 +643,14 @@ button.input { color: var(--ink); }
 @media (min-width: 760px) {
   .empty .btn { width: auto; padding: 0 40px; } /* «Добавить место» в пустой группе — по ширине текста */
 }
+
+/* экран «Где это место?»: крестик в поиске; на компьютере — панель снизу по центру, поиск сверху */
+.q-clear { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); flex: none; }
+.q-clear:hover { background: var(--track); }
+.q-clear[hidden] { display: none; }
+input[type=search]::-webkit-search-cancel-button { display: none; }
+@media (min-width: 760px) {
+  .overlay.picker .picker-sheet { position: absolute; top: auto; bottom: 24px; left: 50%; transform: translateX(-50%); width: calc(100% - 48px); max-width: 520px; border-radius: var(--r-sheet); box-shadow: var(--shadow-lift); }
+  .overlay.picker .picker-top { max-width: 520px; }
+  .picker .leaflet-bottom { bottom: 260px; }
+}

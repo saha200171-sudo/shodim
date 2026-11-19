@@ -289,12 +289,19 @@ button.input { color: var(--ink); }
 .overlay.picker { background: var(--paper); display: block; animation: none; padding: 0; }
 .picker-map { position: absolute; inset: 0; }
 .picker-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); z-index: 500; pointer-events: none; filter: drop-shadow(0 6px 6px rgba(77, 51, 38, .3)); }
-.picker-top { position: absolute; top: var(--top); left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 440px; z-index: 600; display: flex; gap: 8px; align-items: center; }
+.picker-top { position: absolute; top: var(--top); left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 440px; z-index: 600; display: flex; flex-direction: column; gap: 8px; }
+.picker-res { max-height: 46vh; overflow-y: auto; padding: 6px 0; box-shadow: var(--shadow-lift); }
+.picker-res[hidden] { display: none; }
+.picker-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 16px; text-align: left; }
+.picker-item .ic { color: var(--accent); }
+.picker-item + .picker-item { border-top: 1px solid var(--line); }
+.picker-here { gap: 8px; font: 700 15px/20px var(--sans); color: var(--ink); align-items: flex-start; }
+.picker-here .ic { color: var(--accent); margin-top: 1px; }
 .picker-addr { height: 48px; border-radius: var(--r-pill); box-shadow: var(--shadow); font: 600 15px/20px var(--sans); overflow: hidden; }
 .picker-addr .grow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .picker-addr .ic { color: var(--accent); }
 .picker-sheet { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 600; animation: none; }
-.picker .leaflet-bottom { bottom: 200px; }
+.picker .leaflet-bottom { bottom: 240px; }
 
 /* ---------- Просмотр фото ---------- */
 .overlay.viewer { flex-direction: column; justify-content: center; align-items: center; background: rgba(59, 51, 48, .62); padding: calc(76px + env(safe-area-inset-top)) 20px calc(96px + env(safe-area-inset-bottom)); }

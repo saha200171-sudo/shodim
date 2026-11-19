@@ -692,10 +692,53 @@ function nominatim(path) {
   geoChain = p.catch(() => {}).then(() => new Promise(r => setTimeout(r, 1100)));
   return p;
 }
+// «пр. Независимости» → «проспект Независимости»: карта плохо понимает сокращения
+const ABBR = [[/пр-к?т\.?/, 'проспект'], [/просп\./, 'проспект'], [/пр\./, 'проспект'], [/ул\./, 'улица'], [/пер\./, 'переулок'], [/б-р\.?/, 'бульвар'], [/бул\./, 'бульвар'],
+  [/пл\./, 'площадь'], [/ш\./, 'шоссе'], [/наб\./, 'набережная'], [/мкр\.?/, 'микрорайон'], [/туп\./, 'тупик'], [/д\.\s*/, ''], [/г\.\s*/, '']];
+const normAddr = a => ABBR.reduce((t, [re, to]) => t.replace(new RegExp('(?<=^|[\\s,(])' + re.source, 'gi'), to + (to ? ' ' : '')), a)
+  .replace(/(\d)\s*корп?\.?\s*(\d)/gi, '$1к$2').replace(/\s+,/g, ',').replace(/\s+/g, ' ').trim();
 async function geocode(q) {
   if (S.demo || !q) return null;
   try { const j = await nominatim('search?format=jsonv2&limit=1&accept-language=ru&q=' + encodeURIComponent(q)); return j[0] ? { lat: +j[0].lat, lng: +j[0].lon } : null; }
   catch { return null; }
+}
+// Запасной поиск Photon (тоже OpenStreetMap, ищет и по названиям заведений) — рядом с центром города группы
+async function photon(q, near, { limit = 5, city = true } = {}) {
+  if (!q) return [];
+  let u = `https://photon.komoot.io/api/?limit=${limit}&q=${encodeURIComponent(q)}`;
+  if (near) {
+    u += `&lat=${near.lat}&lon=${near.lng}`;
+    if (city) u += `&bbox=${near.lng - 0.45},${near.lat - 0.3},${near.lng + 0.45},${near.lat + 0.3}`;
+  }
+  try {
+    const r = await fetch(u); if (!r.ok) return [];
+    const j = await r.json();
+    return (j.features || []).map(f => {
+      const pr = f.properties || {}, [lng, lat] = f.geometry.coordinates;
+      const street = [pr.street, pr.housenumber].filter(Boolean).join(', ');
+      return { lat, lng, name: pr.name && pr.name !== pr.street ? pr.name : '', sub: [street, pr.city || pr.county].filter(Boolean).join(', ') };
+    });
+  } catch { return []; }
+}
+// Поиск на экране карты: и адреса, и заведения. Nominatim + Photon, без повторов.
+async function searchPlaces(q, near, kind) {
+  const nq = normAddr(q);
+  const vb = near ? `&viewbox=${near.lng - 0.45},${near.lat + 0.3},${near.lng + 0.45},${near.lat - 0.3}` : '';
+  const [a, b] = await Promise.all([
+    nominatim(`search?format=jsonv2&limit=5&accept-language=ru${vb}&q=${encodeURIComponent(nq)}`).catch(() => []),
+    photon(q, near, { city: kind === 'city' }),
+  ]);
+  const out = [];
+  const same = (o, r) => (Math.abs(o.lat - r.lat) < 0.0003 && Math.abs(o.lng - r.lng) < 0.0004) || (o.name && o.name === r.name && o.sub === r.sub);
+  const add = r => { if (!out.some(o => same(o, r))) out.push(r); };
+  for (const r of a || []) {
+    const parts = (r.display_name || '').split(', '), named = r.name && !/^\d/.test(r.name);
+    if (named) add({ lat: +r.lat, lng: +r.lon, name: r.name, sub: parts.slice(1, 4).join(', ') });
+    else if (/^\d/.test(parts[0]) && parts[1]) add({ lat: +r.lat, lng: +r.lon, name: `${parts[1]}, ${parts[0]}`, sub: parts.slice(2, 4).join(', ') }); // «проспект Независимости, 18»
+    else add({ lat: +r.lat, lng: +r.lon, name: parts[0], sub: parts.slice(1, 3).join(', ') });
+  }
+  for (const r of b) add(r);
+  return out.slice(0, 6);
 }
 async function reverseGeocode(lat, lng) {
   if (S.demo) return null;
@@ -710,8 +753,13 @@ async function reverseGeocode(lat, lng) {
 async function coordsFor(address, gid) {
   if (!address) return null;
   if (isUrl(address)) return parseCoords(address);
-  const g = groupById(gid);
-  return geocode(address + (g ? ', ' + g.name : ''));
+  const g = groupById(gid), city = g ? ', ' + g.name : '';
+  // 1) как написали, 2) с расшифровкой сокращений, 3) запасной поиск рядом с городом группы
+  let c = await geocode(address + city);
+  const n = normAddr(address);
+  if (!c && n !== address) c = await geocode(n + city);
+  if (!c && g) { const near = await groupCenter(g); const r = await photon(n, near, { limit: 1, city: g.kind === 'city' }); if (r[0]) c = { lat: r[0].lat, lng: r[0].lng }; }
+  return c;
 }
 async function groupCenter(g) {
   const key = 'shodim-gc-' + g.name;
@@ -726,12 +774,12 @@ async function backfillCoords() {
   if (S.demo || backfillRunning) return;
   backfillRunning = true;
   let tried = {};
-  try { tried = JSON.parse(localStorage.getItem('shodim-geo-tried') || '{}'); } catch { /* нет */ }
+  try { tried = JSON.parse(localStorage.getItem('shodim-geo-tried2') || '{}'); } catch { /* нет */ }
   let changed = false;
   for (const p of S.places.filter(x => x.lat == null && x.address)) {
     const key = p.id + '|' + p.address;
     if (tried[key]) continue;
-    tried[key] = 1; localStorage.setItem('shodim-geo-tried', JSON.stringify(tried));
+    tried[key] = 1; localStorage.setItem('shodim-geo-tried2', JSON.stringify(tried));
     const c = await coordsFor(p.address, p.group_id);
     if (c) { try { await upd('places', p.id, { lat: c.lat, lng: c.lng }); changed = true; } catch (e) { console.warn(e); } }
   }
@@ -816,16 +864,36 @@ function renderGroupMap(g, q) {
 }
 
 // Экран «Где это место?»: карта двигается, булавка стоит в центре
-function pickPoint({ lat, lng, title = '', onDone }) {
+function pickPoint({ lat, lng, title = '', query = '', kind = 'city', onDone }) {
   const ov = document.createElement('div');
   ov.className = 'overlay picker';
   ov.innerHTML = `<div class="picker-map" data-map></div><div class="picker-pin">${pinHTML(false, true)}</div>
-    <div class="picker-top"><button class="round shadow" data-close aria-label="Назад">${icon('back')}</button>
-      <div class="input white grow picker-addr">${icon('pin', 20)}<span class="grow" data-addr>Ищем адрес…</span></div></div>
+    <div class="picker-top"><div class="row" style="gap:8px"><button class="round shadow" data-close aria-label="Назад">${icon('back')}</button>
+      <label class="input white grow picker-addr">${icon('search', 20)}<input type="search" data-q placeholder="Найти адрес или место" value="${esc(query)}" enterkeyhint="search"></label></div>
+      <div class="picker-res card" data-res hidden></div></div>
     <div class="sheet picker-sheet"><div class="stack-xs"><h2 class="h2">Где это место?</h2>
-      <span class="t-sub">${title ? esc(title) + ' — ' : ''}двигайте карту, булавка останется в центре</span></div>
+      <span class="t-sub">${title ? esc(title) + ' — ' : ''}найдите в поиске или двигайте карту, булавка останется в центре</span>
+      <span class="row picker-here">${icon('pin', 18)}<span class="grow" data-addr>Ищем адрес…</span></span></div>
       <button class="btn" data-ok>Готово</button></div>`;
   document.body.appendChild(ov);
+  // поиск: подсказки по мере ввода, нажали на вариант — карта переезжает туда
+  const qi = ov.querySelector('[data-q]'), res = ov.querySelector('[data-res]');
+  let st = null, seq = 0;
+  const runSearch = async () => {
+    const q = qi.value.trim(), my = ++seq;
+    if (q.length < 3) { res.hidden = true; return; }
+    res.hidden = false; res.innerHTML = `<p class="t-sub" style="margin:0;padding:12px 16px">Ищем…</p>`;
+    const c = m ? m.getCenter() : { lat, lng };
+    const list = await searchPlaces(q, { lat: c.lat, lng: c.lng }, kind);
+    if (my !== seq) return;
+    res.innerHTML = list.length ? list.map((r, i) => {
+      const head = r.name || r.sub.split(', ')[0], rest = r.name ? r.sub : r.sub.split(', ').slice(1).join(', ');
+      return `<button class="picker-item" data-i="${i}">${icon('pin', 18)}<span class="col grow"><span class="t-bold">${esc(head)}</span>${rest ? `<span class="t-sub">${esc(rest)}</span>` : ''}</span></button>`;
+    }).join('') : `<p class="t-sub" style="margin:0;padding:12px 16px">Ничего не нашли — попробуйте иначе (улица и дом) или подвиньте карту вручную</p>`;
+    res.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { const r = list[+b.dataset.i]; res.hidden = true; qi.blur(); if (m) m.setView([r.lat, r.lng], 17); });
+  };
+  qi.addEventListener('input', () => { clearTimeout(st); st = setTimeout(runSearch, 650); });
+  qi.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(st); runSearch(); } });
   let m = null, label = null, t = null;
   const close = () => { try { m && m.remove(); } catch { /* нет */ } ov.remove(); setTimeout(tryRefresh, 50); };
   ov.querySelector('[data-close]').onclick = close;
@@ -843,6 +911,8 @@ function pickPoint({ lat, lng, title = '', onDone }) {
     };
     m.on('movestart', () => { clearTimeout(t); });
     m.on('moveend', findAddr); findAddr();
+    m.on('click', () => { res.hidden = true; });
+    if (query) runSearch();
   }).catch(() => { toast('Карта не загрузилась — проверьте интернет'); close(); });
   ov.querySelector('[data-ok]').onclick = () => {
     if (!m) return;
@@ -1049,22 +1119,28 @@ function renderForm(id, q) {
         <button class="chip" data-adjust>${icon('pin', 16)}поставить точку на карте</button></div>`;
     }
     box.querySelector('[data-adjust]').onclick = async e => {
-      e.currentTarget.disabled = true;
-      let c = F.lat != null ? { lat: F.lat, lng: F.lng } : null;
-      if (!c && textAddr) c = await coordsFor(F.address.trim(), F.group_id);
-      if (!c) { const g = groupById(F.group_id); c = g ? await groupCenter(g) : MINSK; }
-      e.currentTarget.disabled = false;
-      pickPoint({ ...c, title: F.name.trim(), onDone: ({ lat, lng, label }) => {
+      // после ожидания e.currentTarget уже пустой — поэтому раньше кнопка «ломалась»; держим саму кнопку
+      const btn = e.currentTarget; btn.disabled = true;
+      const g = groupById(F.group_id);
+      let c = F.lat != null ? { lat: F.lat, lng: F.lng } : null, query = '';
+      if (!c && textAddr) { c = await coordsFor(F.address.trim(), F.group_id); if (!c) query = F.address.trim(); }
+      if (!c) c = g ? await groupCenter(g) : MINSK;
+      btn.disabled = false;
+      pickPoint({ ...c, title: F.name.trim(), query, kind: g?.kind || 'city', onDone: ({ lat, lng, label }) => {
         F.lat = lat; F.lng = lng;
         if (!F.address.trim() && label) { F.address = label; $('[data-f=address]').value = label; }
         drawMapPrev();
       } });
     };
     box.querySelector('[data-find]')?.addEventListener('click', async e => {
-      e.currentTarget.disabled = true; e.currentTarget.lastChild.textContent = 'ищем…';
+      const btn = e.currentTarget; btn.disabled = true; btn.lastChild.textContent = 'ищем…';
       const c = await coordsFor(F.address.trim(), F.group_id);
-      if (c) { F.lat = c.lat; F.lng = c.lng; } else toast('Не нашли такой адрес — поставьте точку вручную');
       drawMapPrev();
+      if (c) { F.lat = c.lat; F.lng = c.lng; drawMapPrev(); return; }
+      // сами не нашли — открываем карту с поиском по этому адресу
+      const g = groupById(F.group_id), near = g ? await groupCenter(g) : MINSK;
+      toast('Сами не нашли — выберите в поиске на карте');
+      pickPoint({ ...near, title: F.name.trim(), query: F.address.trim(), kind: g?.kind || 'city', onDone: ({ lat, lng }) => { F.lat = lat; F.lng = lng; drawMapPrev(); } });
     });
   };
   // адрес поменяли: ссылку на карту разбираем сразу, обычный адрес ищем на карте
@@ -2018,7 +2094,7 @@ function seedDemo() {
       pmenu: () => placeMenu(placeById(id)), delgroup: () => deleteGroupDialog(groupById(id)),
       vmenu: () => { const v = S.visits.find(x => x.id === id); visitMenu(placeById(v.place_id), v); },
       addtravel: () => addPlace(), switch: () => switchSpaceSheet(), viewer: () => document.querySelector('[data-ph="1"]')?.click(), viewer2: () => { const v = [...document.querySelectorAll('[data-ph]')]; v[v.length - 2]?.click(); },
-      pick: () => pickPoint({ lat: 53.9071, lng: 27.5529, title: 'Кофейня «Зерно»', onDone: () => {} }),
+      pick: () => pickPoint({ lat: 53.9071, lng: 27.5529, title: 'Кофейня «Зерно»', query: new URLSearchParams(location.search).get('pq') || '', onDone: () => {} }),
       ach: () => achModal(achById(id || 'regulars')), achd: () => achSheet(achById(id || 'gourmets')), slot: () => slotSheet(id || 'floorL'),
       item: () => itemSheet(itemById(id || 'sofa')), film: () => storageSheet(),
       date: () => dateSheet({ value: '2026-09-14', sub: 'Кофейня «Зерно»', onPick: () => {} }), date2: () => dateSheet({ sub: 'Кофейня «Зерно»', onPick: () => {} }),

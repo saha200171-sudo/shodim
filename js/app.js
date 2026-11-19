@@ -1132,7 +1132,12 @@ function renderPlace(id) {
   // все фото этого места со всех визитов (новые сверху) — для мини-галереи и просмотра
   const gallery = [];
   vs.forEach((v, vi) => photosOf(v.id).forEach(f => gallery.push({ v, src: url(f.path), tape: vi, tilt: TILT[gallery.length % 4], gi: gallery.length })));
-  const MAXG = 6, shown = gallery.length > MAXG ? gallery.slice(0, MAXG - 1) : gallery, more = gallery.length - shown.length;
+  // мини-галерея: на телефоне 6 плиток, на широком экране — сколько влезает в два ряда
+  const galHTML = max => {
+    const shown = gallery.length > max ? gallery.slice(0, max - 1) : gallery, more = gallery.length - shown.length;
+    return shown.map(c => `<button class="mini-pol" data-gph="${c.gi}" style="transform:rotate(${c.tilt}deg)"><span class="tape" style="background:var(${TAPES[c.tape % TAPES.length]})"></span><img src="${esc(c.src)}" alt="" loading="lazy"></button>`).join('')
+      + (more ? `<button class="mini-pol mini-more" data-gph="${shown.length}" style="transform:rotate(${TILT[shown.length % 4]}deg)"><span class="hand-m">ещё ${more}</span></button>` : '');
+  };
   app.innerHTML = `<div class="place-wrap"><div class="hero">${photo(placeImg(p), hashKey(p.id))}
       <div class="bar"><button class="round shadow" data-go="${backTo}" aria-label="Назад">${icon('back')}</button>
       <div class="acts"><button class="round shadow" data-act="heart" aria-label="Хотим снова" style="color:var(--accent)">${icon(p.want_again ? 'heartF' : 'heart')}</button>
@@ -1148,8 +1153,7 @@ function renderPlace(id) {
       ${p.note ? `<div class="note"><div class="hand-m">заметка</div><div class="t-body">${esc(p.note)}</div></div>` : ''}
       ${gallery.length ? `<div class="stack-s">
         <div class="row" style="gap:8px"><h2 class="t-sec">Наши фото</h2><span class="t-sec muted">${gallery.length}</span></div>
-        <div class="mini-gal">${shown.map(c => `<button class="mini-pol" data-gph="${c.gi}" style="transform:rotate(${c.tilt}deg)"><span class="tape" style="background:var(${TAPES[c.tape % TAPES.length]})"></span><img src="${esc(c.src)}" alt="" loading="lazy"></button>`).join('')}
-          ${more ? `<button class="mini-pol mini-more" data-gph="${shown.length}" style="transform:rotate(${TILT[shown.length % 4]}deg)"><span class="hand-m">ещё ${more}</span></button>` : ''}</div>
+        <div class="mini-gal" data-gal>${galHTML(6)}</div>
       </div>` : ''}
       <div class="stack-s">
       <div class="row" style="gap:8px"><h2 class="t-sec">Наши визиты</h2>${vs.length ? `<span class="t-sec muted">${vs.length}</span>` : ''}</div>
@@ -1167,7 +1171,18 @@ function renderPlace(id) {
   });
   on('[data-act=more]', 'click', () => placeMenu(p));
   on('[data-act=visit]', 'click', () => visitSheet(p, null));
-  on('[data-gph]', 'click', (e, el) => openViewer(gallery, +el.dataset.gph));
+  const galBox = $('[data-gal]');
+  if (galBox) {
+    galBox.addEventListener('click', e => { const b = e.target.closest('[data-gph]'); if (b) openViewer(gallery, +b.dataset.gph); });
+    let lastMax = 6;
+    const fit = () => {
+      if (!galBox.isConnected) return removeEventListener('resize', fit);
+      const cols = getComputedStyle(galBox).gridTemplateColumns.split(' ').filter(Boolean).length || 3;
+      const max = innerWidth >= 760 ? cols * 2 : 6;
+      if (max !== lastMax) { lastMax = max; galBox.innerHTML = galHTML(max); }
+    };
+    fit(); addEventListener('resize', fit);
+  }
   on('[data-vid]', 'click', (e, el) => {
     if (el.dataset.lp === '1') { delete el.dataset.lp; return; } // это было долгое нажатие
     visitSheet(p, S.visits.find(v => v.id === el.dataset.vid));
@@ -2276,7 +2291,8 @@ function seedDemo() {
   for (const o of new URLSearchParams(location.search).getAll('own')) S.room.owned.push(o);
   for (const pl of new URLSearchParams(location.search).getAll('place')) { const [sl, it] = pl.split(':'); S.room.placed[sl] = it; }
   try { localStorage.setItem('shodim-ach-demo', JSON.stringify(ACHIEVEMENTS.map(a => a.id))); } catch { /* нет места */ }
-  S.photos = [F('f1', 'v3', fake('a', '#CFE0C3', '#8FAE82'), 0), F('f2', 'v3', fake('b', '#E4EEDD', '#B5CBA8'), 1), F('f3', 'v3', fake('c', '#D3E0C9', '#6F8A64'), 2),
+  const many = new URLSearchParams(location.search).has('many') ? Array.from({ length: 14 }, (_, i) => F('m' + i, 'v1', fake('m' + i, ['#F6D3BF', '#D3E0C9', '#CFDDE6', '#F5E6B8'][i % 4], '#D9826B'), i + 1)) : [];
+  S.photos = [...many, F('f1', 'v3', fake('a', '#CFE0C3', '#8FAE82'), 0), F('f2', 'v3', fake('b', '#E4EEDD', '#B5CBA8'), 1), F('f3', 'v3', fake('c', '#D3E0C9', '#6F8A64'), 2),
     F('f4', 'v4', fake('d', '#F8E4E5', '#DDAEB2'), 0), F('f5', 'v4', fake('e', '#FBF2D8', '#E5CF8E'), 1), F('f6', 'v1', (S.urls.set('demo/tall', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="540"><rect width="300" height="540" fill="#CFDDE6"/><circle cx="150" cy="170" r="60" fill="#F0CFD1"/><rect x="80" y="250" width="140" height="220" rx="40" fill="#8FB3CC"/></svg>')), 'demo/tall'), 0)];
 }
 

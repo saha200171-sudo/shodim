@@ -1739,7 +1739,7 @@ function renderAchievements() {
     const g = R.got.has(a.id), v = Math.min(a.value(R.stats), a.goal);
     return `<button class="card ach ${g ? '' : 'todo'}" data-ach="${a.id}">${achIconHTML(a, g)}
       <span class="col grow" style="gap:2px"><span class="t-cards">${esc(a.name)}</span><span class="t-sub">${esc(a.text)}</span>
-      ${g ? `<span class="t-cap accent">${fmtDate(R.got.get(a.id))}</span>` : `<span class="bar"><span style="width:${(v / a.goal * 100).toFixed(1)}%"></span></span><span class="t-cap muted">${v}/${a.goal}</span>`}</span>
+      ${g ? `<span class="t-cap accent">${fmtDate(R.got.get(a.id))}</span>` : `<span class="pbar"><span style="width:${(v / a.goal * 100).toFixed(1)}%"></span></span><span class="t-cap muted">${v}/${a.goal}</span>`}</span>
       ${rewardHTML(a)}</button>`;
   };
   app.innerHTML = `<div class="screen">
@@ -1759,7 +1759,7 @@ function achSheet(a) {
   openSheet(`<div class="row" style="gap:14px">${achIconHTML(a, true).replace('ach-ic', 'ach-ic big')}<div class="col grow" style="gap:2px"><h2 class="h2">${esc(a.name)}</h2>
       <span class="t-sub">${esc(a.text)} · ${a.cups ? `+${a.cups} ${cupsWord(a.cups)}` : `трофей «${esc(itemById(a.item).name)}»`}</span></div></div>
     <div class="stack-xs"><div class="row between"><span class="t-bold">${v} из ${a.goal}</span><span class="t-bold accent">${g ? `получено ${fmtDayMonth(R.got.get(a.id))}` : `ещё ${left}`}</span></div>
-      <span class="bar big"><span style="width:${(v / a.goal * 100).toFixed(1)}%"></span></span></div>
+      <span class="pbar big"><span style="width:${(v / a.goal * 100).toFixed(1)}%"></span></span></div>
     ${k ? `<div class="card info" style="background:var(--paper)"><div class="row wrap" style="gap:8px"><span class="t-body">${a.visitsKind ? 'Считаются походы в места с отметкой' : 'Считаются разные места с отметкой'}</span><span class="chip kind on">${icon('kind-' + k.id, 18)}${k.name}</span></div>
       <span class="t-sub">${a.visitsKind ? 'Каждый визит засчитывается отдельно.' : 'Повторный визит в то же место не добавляет.'} Отметка ставится в карточке места: «Что это за место?».</span></div>
       ${counted.length ? `<div class="stack-xs"><span class="t-bold">Уже засчитаны</span><div class="chips">${counted.slice(0, 8).map(p => `<span class="chip paper">${esc(shortName(p.name))}</span>`).join('')}${counted.length > 8 ? `<span class="chip paper">+ ещё ${counted.length - 8}</span>` : ''}</div></div>` : ''}` : ''}`);
@@ -1802,7 +1802,7 @@ function renderDream() {
     <div class="col"><span class="hand-m accent">когда соберём всё</span><h1 class="h1">Комната мечты</h1></div>
     ${half('left')}${half('right')}
     <div class="card stack-xs" style="padding:14px 16px"><div class="row between"><span class="t-bold">Уже собрано ${n} из ${total} ${plural(total, 'вещи', 'вещей', 'вещей')}</span><span class="t-bold accent">${Math.round(n / total * 100)}%</span></div>
-      <span class="bar big"><span style="width:${(n / total * 100).toFixed(1)}%"></span></span>
+      <span class="pbar big"><span style="width:${(n / total * 100).toFixed(1)}%"></span></span>
       <span class="t-sub">С замочком — то, что ещё впереди. ${esc(hint)}</span></div>
     <button class="btn" data-go="#/room">Вернуться в нашу комнату</button>
   </div>`;

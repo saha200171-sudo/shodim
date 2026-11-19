@@ -435,9 +435,9 @@ button.input { color: var(--ink); }
 .ach-ic.got { background: var(--butter); color: var(--accent); }
 .ach-ic.big { width: 64px; height: 64px; }
 .ach.todo .ptag { opacity: .7; }
-.bar { display: block; height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; margin-top: 6px; }
-.bar.big { height: 8px; border-radius: 4px; margin-top: 0; }
-.bar > span { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+.pbar { display: block; height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; margin-top: 6px; }
+.pbar.big { height: 8px; border-radius: 4px; margin-top: 0; }
+.pbar > span { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
 .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
 .confetti i { position: absolute; width: 10px; height: 4px; border-radius: 2px; opacity: .9; }
 .dialog { position: relative; }

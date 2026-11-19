@@ -541,10 +541,20 @@ function groupCardHTML(g) {
     ${photo(url(g.cover_path), g.cover_color || hashKey(g.id))}
     <span class="cap"><span class="t-card">${esc(g.name)}</span><span class="t-sub">${c.want} хотим · ${c.been} были</span></span></button>`;
 }
+// карточка поездки на главной (компьютер): как у города, с отметкой статуса на обложке
+function tripCardHTML(t) {
+  const st = tripStatus(t), n = placesIn(t.id).length;
+  return `<button class="card gcard" data-gid="${t.id}" data-go="#/g/${t.id}">
+    ${photo(url(t.cover_path), t.cover_color || hashKey(t.id), { inner: `<span class="badge" style="${st.cls ? `background:var(--${st.cls})` : ''}">${esc(st.text)}</span>` })}
+    <span class="cap"><span class="t-card">${esc(t.name)}</span><span class="t-sub">${n} ${plural(n, 'место', 'места', 'мест')}</span></span></button>`;
+}
 function renderHome() {
   S.ctxGroup = null;
   const been = S.places.filter(isBeen).length, want = S.places.filter(p => !isBeen(p)).length;
   const ts = trips();
+  const travelSub = ts.length
+    ? `${ts.filter(t => t.trip_status !== 'done').length} в планах · ${ts.filter(t => t.trip_status === 'done').length} съездили` // как у городов: «хотим · были»
+    : 'пока без поездок — можно помечтать';
   app.innerHTML = `<div class="screen">
     <div class="head"><div class="col"><span class="hand-m accent">привет, это мы</span><h1 class="h1">Сходим?</h1></div>
       <button class="avatars" data-go="#/invite" aria-label="Участники">${avatarsHTML()}</button></div>
@@ -554,15 +564,21 @@ function renderHome() {
     <div class="row between"><h2 class="t-sec">Наши группы</h2><button class="t-bold accent" data-act="new-group">+ новая</button></div>
     <div class="stack-s">
       ${cities().length ? `<div class="grid2">${cities().map(groupCardHTML).join('')}</div>` : ''}
-      <button class="card gcard wide" data-go="#/travel">
+      <button class="card gcard wide only-phone" data-go="#/travel">
         ${photo(ts[0] ? url(ts[0].cover_path) : null, ts[0]?.cover_color || 'sky')}
         <span class="cap"><span class="t-card">Путешествия</span>
-        <span class="t-sub">${ts.length
-          ? `${ts.filter(t => t.trip_status !== 'done').length} в планах · ${ts.filter(t => t.trip_status === 'done').length} съездили` // как у городов: «хотим · были»
-          : 'пока без поездок — можно помечтать'}</span></span></button>
+        <span class="t-sub">${travelSub}</span></span></button>
+    </div>
+    <!-- на компьютере: «Путешествия» — отдельный блок с самими поездками, карточками как у городов -->
+    <div class="stack-s only-desk">
+      <div class="row between"><div class="row" style="gap:10px;align-items:baseline"><h2 class="t-sec">Путешествия</h2><span class="t-sub">${travelSub}</span></div>
+        <button class="t-bold accent" data-go="#/travel">все поездки →</button></div>
+      <div class="grid2">${ts.map(tripCardHTML).join('')}
+        <button class="dashed trip-add" data-act="new-trip">${icon('plus', 20)}Новая поездка</button></div>
     </div></div>${navHTML('p')}`;
   bindCommon();
   on('[data-act=new-group]', 'click', () => groupSheet(null, 'city'));
+  on('[data-act=new-trip]', 'click', () => groupSheet(null, 'trip'));
   app.querySelectorAll('.gcard[data-gid]').forEach(el => longPress(el, done => groupMenu(groupById(el.dataset.gid), done)));
 }
 

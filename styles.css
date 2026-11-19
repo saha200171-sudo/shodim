@@ -476,6 +476,8 @@ button.input { color: var(--ink); }
    Компьютер и планшет (от 760 px): шире, карточки сеткой, комната целиком
    ========================================================= */
 .dream-halves { display: flex; flex-direction: column; gap: var(--sl); }
+.only-desk { display: none !important; }
+.trip-add { height: auto; min-height: 120px; }
 @media (min-width: 760px) {
   :root { --side: 40px; --top: 48px; }
   .app { max-width: 1180px; }
@@ -484,6 +486,9 @@ button.input { color: var(--ink); }
   .grid2 { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px 16px; }
   .gcard .ph { height: 140px; }
   .gcard.wide .ph { height: 120px; }
+  .only-phone { display: none !important; }
+  .only-desk { display: flex !important; }
+  .trip-add { min-height: 0; height: 100%; border-radius: var(--r-card); }
   .board { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 28px 24px; }
   .mini-gal { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
   .ach-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 12px; }

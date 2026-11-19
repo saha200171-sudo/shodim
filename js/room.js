@@ -46,7 +46,7 @@ const I = (id, name, slot, box, z, extra) => ({ id, name, slot, box, z, art: `ro
 export const ITEMS = [
   // --- потолок
   I('garland', 'Гирлянда', 'ceil', [7.7, 7.9, 344.4, 44.2], 30, { price: 6, cat: 'ceil', tile: 'butter', note: 'лампочки на проводе над окном' }),
-  I('lanterns', 'Бумажные фонарики', 'ceil2', [365, 0, 309, 77], 31, { price: 8, cat: 'ceil', tile: 'lav', note: 'над кинозоной' }),
+  I('lanterns', 'Бумажные фонарики', 'ceil2', [365, 0, 309, 77], 31, { price: 8, cat: 'ceil', tile: 'lav', note: 'пять разноцветных' }),
   // --- стены
   I('photowall', 'Фотостена', 'wallL', [23.3, 52.1, 89, 111], 20, { price: 5, cat: 'walls', tile: 'peach', note: 'полароиды на скотче' }),
   I('clock', 'Часы', 'wallL', [36, 66, 60, 60], 20, { price: 3, cat: 'walls', tile: 'lav' }),

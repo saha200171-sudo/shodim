@@ -1712,7 +1712,7 @@ function itemSheet(it) {
   const { el, close } = openSheet(`${FILTERS_SVG}<div class="stack-xs"><div class="item-prev" data-prev>${previewHTML(it, R, true)}</div>
       ${showOcc ? `<div class="segmented small" data-cmp><button data-v="0">сейчас</button><button class="on" data-v="1">с новой вещью</button></div>` : ''}
       <span class="t-sub center" data-cap>${esc(cap)}</span></div>
-    <div class="stack-xs"><h2 class="h2">${esc(it.name)}</h2><span class="t-sub">${esc([it.note, SLOT_NAMES[it.slot]].filter(Boolean).join(' · '))}</span></div>
+    <div class="stack-xs center" style="align-items:center"><h2 class="h2">${esc(it.name)}</h2><span class="t-sub">${esc([it.note, SLOT_NAMES[it.slot]].filter((v, i, arr) => v && !(i === 0 && arr[1] && arr[1].toLowerCase().includes(v.toLowerCase()))).join(' · '))}</span></div>
     ${ach ? `<div class="kind-hint" style="cursor:default">${icon('trophy', 18)}<span>Трофей за «${esc(ach.name)}»: ${esc(ach.text.toLowerCase())}. ${own ? 'Уже ваш!' : `Сейчас ${Math.min(ach.value(R.stats), ach.goal)} из ${ach.goal}.`}</span></div>` : ''}
     ${own ? `<button class="btn" data-place ${placedNow ? 'disabled' : ''}>${placedNow ? 'Уже стоит в комнате' : 'Поставить в комнату'}</button>`
       : it.price ? `<button class="btn" data-buy ${lack > 0 ? 'disabled' : ''}>${icon('cup')}${lack > 0 ? `Не хватает ${lack} ${cupsGen(lack)}` : `Купить за ${it.price}`}</button>

@@ -324,3 +324,118 @@ button.input { color: var(--ink); }
 .mini-pol img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 2px; }
 .mini-pol .tape { position: absolute; top: -7px; left: 50%; width: 34px; height: 12px; margin-left: -17px; opacity: .85; transform: rotate(-5deg); }
 .mini-more { display: grid; place-items: center; aspect-ratio: 1 / 1.12; background: var(--paper); border: 1.5px dashed var(--dash); box-shadow: none; color: var(--accent); }
+
+/* =========================================================
+   Комната
+   ========================================================= */
+.room-entry { position: relative; }
+.room-entry .house { position: absolute; right: -4px; bottom: -4px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; border: 2px solid var(--paper); }
+.cups { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px 0 6px; border-radius: var(--r-pill); background: var(--card); font: 800 17px/22px var(--sans); box-shadow: var(--shadow); }
+.cups.static { padding: 0 16px; box-shadow: none; font-size: 16px; }
+.cup-dot { width: 32px; height: 32px; border-radius: 50%; background: var(--butter); color: var(--accent); display: grid; place-items: center; }
+.pill-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px 7px 12px; border-radius: var(--r-pill); background: var(--card); font: 700 15px/20px var(--sans); box-shadow: var(--shadow); white-space: nowrap; }
+.pill-btn .ic { color: var(--accent); }
+.pill-btn.static { box-shadow: none; }
+
+/* сцена: две половины по 360 «точек», листаются вбок */
+.scene-vp { position: relative; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; border-radius: 20px; box-shadow: var(--shadow); scrollbar-width: none; background: #F3E8DA; }
+.scene-vp::-webkit-scrollbar { display: none; }
+.scene { position: relative; width: 200%; aspect-ratio: 720 / 330; overflow: hidden; isolation: isolate; }
+.scene-vp, .scene-half { isolation: isolate; z-index: 0; }
+.snap { position: absolute; top: 0; width: 50%; height: 1px; scroll-snap-align: start; pointer-events: none; }
+.scene .l { position: absolute; display: block; max-width: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.scene.t-night .l:not(.win) { filter: url(#f-night); }
+.scene.t-evening .l:not(.win):not(.bal) { filter: url(#f-evening); }
+.scene .l.ghost { opacity: .28; }
+.scene-hot { position: absolute; top: 0; left: 0; width: 200%; height: 100%; }
+.scene-hot .hz { position: absolute; border-radius: 10px; }
+.scene-hot .hz:active { background: rgba(255, 255, 255, .25); }
+.film-pill { position: absolute; transform: translate(-50%, -50%); z-index: 90; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--r-pill);
+  background: var(--card); box-shadow: var(--shadow-lift); font: 700 14px/18px var(--sans); white-space: nowrap; animation: pop .2s; }
+.film-pill .ic { color: var(--accent); }
+.lockb { position: absolute; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 50%; background: var(--card); color: var(--muted); display: grid; place-items: center; z-index: 95; box-shadow: 0 2px 5px rgba(77, 51, 38, .18); }
+.scene-half { border-radius: 20px; overflow: hidden; box-shadow: var(--shadow); aspect-ratio: 360 / 330; position: relative; flex: none; }
+.scene-half .scene { position: absolute; top: 0; }
+.scene-half.left .scene { left: 0; } .scene-half.right .scene { left: -100%; }
+.dot { width: 8px; height: 8px; border-radius: 4px; background: var(--dash); transition: width .2s, background .2s; }
+.dot.on { width: 22px; background: var(--accent); }
+[data-hint] { cursor: pointer; }
+
+/* свет вечером и ночью */
+.glow { position: absolute; pointer-events: none; mix-blend-mode: screen; z-index: 80; border-radius: 50%; }
+.g-bulb { background: radial-gradient(closest-side, rgba(255, 200, 85, .95), rgba(255, 194, 79, .35) 45%, rgba(255, 194, 79, 0)); }
+.g-lantern { background: radial-gradient(closest-side, rgba(255, 205, 100, .75), rgba(255, 194, 79, .25) 50%, rgba(255, 194, 79, 0)); }
+.g-screen { border-radius: 30px; background: radial-gradient(closest-side, rgba(255, 214, 160, .5), rgba(255, 214, 160, 0)); }
+.g-cup { background: radial-gradient(closest-side, rgba(255, 210, 90, .6), rgba(255, 210, 90, 0)); }
+
+/* лёгкие анимации */
+.scene .it-balloon { transform-origin: 50% 100%; animation: sway 6s ease-in-out infinite; }
+.scene .it-monstera { transform-origin: 50% 100%; animation: sway2 7s ease-in-out infinite; }
+.scene .it-cat { transform-origin: 30% 100%; animation: breathe 4s ease-in-out infinite; }
+.glow { animation: glowb 3.4s ease-in-out infinite; }
+.scene.t-evening .glow { animation-name: glowe; }
+@keyframes sway { 0%, 100% { transform: rotate(-3deg) translateY(0); } 50% { transform: rotate(3deg) translateY(-2px); } }
+@keyframes sway2 { 0%, 100% { transform: rotate(-.8deg); } 50% { transform: rotate(.8deg); } }
+@keyframes breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.025); } }
+@keyframes glowb { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
+@keyframes glowe { 0%, 100% { opacity: .5; } 50% { opacity: .68; } }
+@media (prefers-reduced-motion: reduce) { .scene .l, .glow { animation: none !important; } }
+
+.room-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.rtile { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 6px 14px; text-align: center; }
+.rtile .bub { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; color: var(--accent); margin-bottom: 6px; }
+.rtile .t-cards { font-size: 15px; letter-spacing: -.1px; overflow-wrap: normal; }
+.rtile { padding-left: 4px; padding-right: 4px; }
+
+/* магазин и инвентарь */
+.scard { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 8px 8px 12px; text-align: left; }
+.scard .t-cards { padding: 0 6px; }
+.scard .ptag { margin-left: 6px; }
+.scard-img { width: 100%; aspect-ratio: 1.3; border-radius: 16px; position: relative; }
+.scard-img img { position: absolute; inset: 14px; width: calc(100% - 28px); height: calc(100% - 28px); object-fit: contain; }
+.ptag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 10px; border-radius: var(--r-pill); background: var(--accent); color: #fff; font: 800 15px/20px var(--sans); white-space: nowrap; }
+.ptag.dim { background: var(--peach); color: var(--accent); }
+.ptag.own { background: var(--sage); color: var(--ink); }
+.ptag.trophy { background: var(--butter); color: var(--ink); }
+.ptag.plain { background: var(--paper); color: var(--muted); font-weight: 700; }
+.item-hero { height: 170px; border-radius: var(--r-card); position: relative; flex: none; }
+.item-hero img { position: absolute; inset: 22px; width: calc(100% - 44px); height: calc(100% - 44px); object-fit: contain; }
+.pick-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.pick { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.pick-img { width: 100%; aspect-ratio: 1; border-radius: 18px; position: relative; transition: box-shadow .15s; }
+.pick-img img { position: absolute; inset: 12px; width: calc(100% - 24px); height: calc(100% - 24px); object-fit: contain; }
+.pick.on .pick-img { box-shadow: inset 0 0 0 3px var(--accent); }
+.pick.off .pick-img img { opacity: .45; }
+
+/* достижения */
+.ach { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 12px; text-align: left; width: 100%; box-shadow: none; }
+.ach .ptag { align-self: flex-start; }
+.ach-ic { width: 48px; height: 48px; border-radius: 50%; background: var(--track); color: var(--muted); display: grid; place-items: center; flex: none; }
+.ach-ic.got { background: var(--butter); color: var(--accent); }
+.ach-ic.big { width: 64px; height: 64px; }
+.ach.todo .ptag { opacity: .7; }
+.bar { display: block; height: 6px; border-radius: 3px; background: var(--track); overflow: hidden; margin-top: 6px; }
+.bar.big { height: 8px; border-radius: 4px; margin-top: 0; }
+.bar > span { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+.confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
+.confetti i { position: absolute; width: 10px; height: 4px; border-radius: 2px; opacity: .9; }
+.dialog { position: relative; }
+
+/* «Наша плёнка» */
+.film-strip { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; padding: 14px 8px; border-radius: 6px; background: #B89474; position: relative; }
+.film-strip::before, .film-strip::after { content: ''; position: absolute; left: 6px; right: 6px; height: 5px; background: repeating-linear-gradient(90deg, #FBF6EF 0 6px, transparent 6px 12px); border-radius: 1px; }
+.film-strip::before { top: 4px; } .film-strip::after { bottom: 4px; }
+.film-strip .fr { aspect-ratio: .78; background: #F3E5D6; border-radius: 2px; position: relative; overflow: hidden; }
+.film-strip .fr i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--peach); }
+.film-strip .fr.on.c0 { background: var(--peach); } .film-strip .fr.on.c1 { background: var(--sage); } .film-strip .fr.on.c2 { background: var(--butter); } .film-strip .fr.on.c3 { background: var(--sky); }
+
+/* тип места в форме */
+.chip.kind { gap: 6px; padding: 7px 14px 7px 11px; color: var(--muted); }
+.chip.kind .ic { color: var(--muted); }
+.chip.kind.on { background: var(--peach); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.chip.kind.on .ic, .chip.kind.hint .ic { color: var(--accent); }
+.chip.kind.hint { color: var(--ink); outline: 1.5px dashed var(--accent); outline-offset: -1.5px; }
+.kind-hint { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border-radius: var(--r-mini); background: var(--butter); text-align: left; font: 400 15px/20px var(--sans); }
+.kind-hint .ic { color: var(--accent); }
+.chip.kind-chip { background: var(--peach); }
+.chip.kind-chip .ic { color: var(--accent); }

@@ -1,5 +1,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm';
 import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
+import { KINDS, kindById, kindHints, ITEMS, itemById, SHOP, SHOP_TOTAL, SLOT_NAMES, CATS, ACHIEVEMENTS, achById,
+  computeAchievements, cupsBalance, ownedSet, arrangement, windowState } from './room.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
@@ -20,6 +22,7 @@ const S = {
   gfilter: { q: '', tag: null },
   ctxGroup: null,
   dirty: false,
+  room: { owned: [], placed: {} }, hasRoom: false, hasKinds: false, // комната (003_room.sql)
 };
 const KEY = { groups: 'groups', places: 'places', visits: 'visits', visit_photos: 'photos' };
 
@@ -75,7 +78,20 @@ const I = {
   list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1" fill="currentColor" stroke="none"/>',
   locate: '<path d="M20 4L4 11l7 2 2 7z"/>',
   eyeOff: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
+  // комната
+  cup: '<path d="M6.5 9h11l-1.3 10.4a2 2 0 0 1-2 1.6H9.8a2 2 0 0 1-2-1.6z"/><path d="M5.5 9h13"/><path d="M12.5 9l1.6-5.5h2.4"/>',
+  star: '<path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+  plane: '<path d="M10.5 13.5L3 11l1.5-1.5 7 .5 4.5-5c1-1 2.5-1.2 3-.5s.5 2-.5 3l-5 4.5.5 7L12.5 20.5 10 13"/>',
+  lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+  home: '<path d="M4 11l8-6.5 8 6.5"/><path d="M6 9.5V19a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9.5"/><path d="M10 20v-5h4v5"/>',
+  bag: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
+  box: '<path d="M4 8l8-4 8 4-8 4z"/><path d="M4 8v8l8 4 8-4V8"/><path d="M12 12v8"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M8.5 20h7M10 17h4"/>',
+  film: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14M3 9h4M3 15h4M17 9h4M17 15h4"/>',
 };
+for (const k of KINDS) I['kind-' + k.id] = k.icon;
 const icon = (k, size = 22) => `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>`;
 
 // Пастельные «холмики» вместо фото
@@ -217,7 +233,18 @@ async function loadAll() {
   ]);
   for (const r of res) if (r.error) throw r.error;
   [S.members, S.groups, S.places, S.visits, S.photos] = res.map(r => r.data);
-  await signUrls();
+  await Promise.all([signUrls(), loadRoom()]);
+}
+// Комната и тип места появляются после 003_room.sql — до этого приложение просто работает без них
+async function loadRoom() {
+  if (S.demo || !S.space) return;
+  const [r, k] = await Promise.all([
+    sb.from('room').select('*').eq('space_id', S.space.id).maybeSingle(),
+    sb.from('places').select('kinds').limit(1),
+  ]);
+  S.hasKinds = !k.error;
+  if (r.error) { S.hasRoom = false; console.warn('room:', r.error.message); }
+  else { S.hasRoom = true; S.room = { owned: r.data?.owned || [], placed: r.data?.placed || {} }; }
 }
 
 // Запись: в демо-режиме — только в памяти
@@ -295,7 +322,7 @@ function subscribe() {
   if (S.demo || !S.space) return;
   if (channel) sb.removeChannel(channel);
   channel = sb.channel('space-' + S.space.id);
-  for (const t of ['groups', 'places', 'visits', 'visit_photos']) {
+  for (const t of ['groups', 'places', 'visits', 'visit_photos', ...(S.hasRoom ? ['room'] : [])]) {
     channel.on('postgres_changes', { event: '*', schema: 'public', table: t, filter: `space_id=eq.${S.space.id}` }, scheduleRefresh);
   }
   channel.subscribe();
@@ -333,6 +360,10 @@ window.addEventListener('hashchange', e => {
 });
 
 function render() {
+  renderInner();
+  setTimeout(maybeCelebrate, 350);
+}
+function renderInner() {
   document.querySelectorAll('.overlay').forEach(o => o.remove());
   cleanupMaps();
   const { parts, q } = parseRoute();
@@ -348,6 +379,7 @@ function render() {
   if (a === 'album') return renderAlbum(q);
   if (a === 'travel') return renderTravel();
   if (a === 'invite') return renderInvite();
+  if (a === 'room') return renderRoomRoute(b, q);
   renderHome();
 }
 
@@ -510,7 +542,7 @@ function renderHome() {
   const ts = trips();
   app.innerHTML = `<div class="screen">
     <div class="head"><div class="col"><span class="hand-m accent">привет, это мы</span><h1 class="h1">Сходим?</h1></div>
-      <button class="avatars" data-go="#/invite" aria-label="Участники">${avatarsHTML()}</button></div>
+      <button class="avatars room-entry" data-go="#/room" aria-label="Наша комната">${avatarsHTML()}<span class="house">${icon('home', 14)}</span></button></div>
     <div class="card counter"><div class="num">${been}</div><div class="col grow">
       <span class="t-bold">${plural(been, 'место', 'места', 'мест')}, где мы уже были вместе</span>
       <span class="t-sub">${want ? `и ещё ${want} ${plural(want, 'ждёт', 'ждут', 'ждут')} нас в планах` : 'добавьте места, куда хотите сходить'}</span></div></div>
@@ -900,7 +932,7 @@ function renderPlace(id) {
       <div class="acts"><button class="round shadow" data-act="heart" aria-label="Хотим снова" style="color:var(--accent)">${icon(p.want_again ? 'heartF' : 'heart')}</button>
       <button class="round shadow" data-act="more" aria-label="Ещё">${icon('more')}</button></div></div></div>
     <div class="sheetlike">
-      <div class="chips">${(p.tags || []).map(t => `<span class="chip peach">${esc(t)}</span>`).join('')}${g ? `<span class="chip sage">${esc(g.name)}</span>` : ''}${vs.length ? `<span class="chip butter">были ${vs.length} ${plural(vs.length, 'раз', 'раза', 'раз')}</span>` : ''}</div>
+      <div class="chips">${(p.kinds || []).map(k => kindById(k)).filter(Boolean).map(k => `<span class="chip kind-chip">${icon('kind-' + k.id, 16)}${k.name}</span>`).join('')}${(p.tags || []).filter(t => !(p.kinds || []).some(k => kindById(k)?.name.toLowerCase() === t.toLowerCase())).map(t => `<span class="chip peach">${esc(t)}</span>`).join('')}${g ? `<span class="chip sage">${esc(g.name)}</span>` : ''}${vs.length ? `<span class="chip butter">были ${vs.length} ${plural(vs.length, 'раз', 'раза', 'раз')}</span>` : ''}</div>
       <h1 class="h2">${esc(p.name)}</h1>
       ${ig || p.address ? `<div class="card info">
         ${ig ? `<a class="irow" href="${esc(ig.href)}" target="_blank" rel="noopener"><span class="bubble" style="background:var(--rose)">${icon('insta', 20)}</span><span class="col grow"><span class="t-sub">Instagram</span><span class="t-bold">${esc(ig.label)}</span></span><span class="ext">${icon('ext', 20)}</span></a>` : ''}
@@ -946,7 +978,7 @@ function renderForm(id, q) {
   if (!S.groups.length) { toast('Сначала создайте группу'); return go('/'); }
   const F = {
     name: p?.name || '', group_id: p?.group_id || q.get('g') || cities()[0]?.id || S.groups[0].id,
-    tags: [...(p?.tags || [])], instagram: p?.instagram || '', address: p?.address || '', note: p?.note || '',
+    tags: [...(p?.tags || [])], kinds: [...(p?.kinds || [])], instagram: p?.instagram || '', address: p?.address || '', note: p?.note || '',
     coverFile: null, coverUrl: null, coverRemoved: false,
     lat: p?.lat ?? null, lng: p?.lng ?? null,
   };
@@ -961,6 +993,8 @@ function renderForm(id, q) {
     <div class="field"><span class="label">Фото</span><div data-cover></div></div>
     <div class="field"><label for="f-name">Название</label><input id="f-name" class="input" data-f="name" placeholder="Например, кофейня «Зерно»" value="${esc(F.name)}"></div>
     <div class="field"><label>Группа</label><label class="input"><select data-f="group_id">${groupOptions()}</select>${icon('down', 20)}</label></div>
+    <div class="field"><span class="label">Что это за место? <span class="t-sub" style="font-weight:400">для достижений</span></span><div class="chips" data-kinds></div></div>
+    <div data-kindhint></div>
     <div class="field"><span class="label">Теги</span><div class="chips" data-tags></div></div>
     <div class="field"><label>Instagram</label><label class="input">${icon('insta', 20)}<input data-f="instagram" placeholder="@place или ссылка" value="${esc(F.instagram)}" autocapitalize="off"></label></div>
     <div class="field"><label>Адрес</label><label class="input">${icon('pin', 20)}<input data-f="address" placeholder="Улица, дом или ссылка на карту" value="${esc(F.address)}"></label><div data-mapprev></div></div>
@@ -989,12 +1023,12 @@ function renderForm(id, q) {
     const box = $('[data-tags]');
     box.innerHTML = suggestions().map(t => `<button class="chip ${F.tags.includes(t) ? 'active' : ''}" data-tag="${esc(t)}">${esc(t)}</button>`).join('')
       + `<button class="chip" data-newtag>+ новый тег</button>`;
-    on('[data-tag]', 'click', (e, el) => { const t = el.dataset.tag; F.tags = F.tags.includes(t) ? F.tags.filter(x => x !== t) : [...F.tags, t]; drawTags(); }, box);
+    on('[data-tag]', 'click', (e, el) => { const t = el.dataset.tag; F.tags = F.tags.includes(t) ? F.tags.filter(x => x !== t) : [...F.tags, t]; drawTags(); drawKinds(); }, box);
     box.querySelector('[data-newtag]').addEventListener('click', e => {
       const inp = document.createElement('input');
       inp.className = 'chip'; inp.placeholder = 'тег'; inp.style.cssText = 'width:120px;border:0;outline:2px solid var(--peach)';
       e.currentTarget.replaceWith(inp); inp.focus();
-      const add = () => { const t = inp.value.trim().toLowerCase(); if (t && !F.tags.includes(t)) F.tags.push(t); drawTags(); };
+      const add = () => { const t = inp.value.trim().toLowerCase(); if (t && !F.tags.includes(t)) F.tags.push(t); drawTags(); drawKinds(); };
       inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); add(); } });
       inp.addEventListener('blur', add);
     });
@@ -1040,13 +1074,25 @@ function renderForm(id, q) {
     if (a) { const c = await coordsFor(a, F.group_id); if (c && F.address.trim() === a) { F.lat = c.lat; F.lng = c.lng; } }
     drawMapPrev();
   });
-  drawCover(); drawTags(); drawMapPrev();
+  // «Что это за место?»: только эти отметки считаются в достижения. Свои теги лишь подсказывают (пунктир).
+  const drawKinds = () => {
+    const hints = kindHints(F.tags).filter(h => !F.kinds.includes(h.kind));
+    const box = $('[data-kinds]');
+    box.innerHTML = KINDS.map(k => `<button class="chip kind ${F.kinds.includes(k.id) ? 'on' : hints.some(h => h.kind === k.id) ? 'hint' : ''}" data-kind="${k.id}">${icon('kind-' + k.id, 18)}${k.name}</button>`).join('');
+    on('[data-kind]', 'click', (e, el) => { const k = el.dataset.kind; F.kinds = F.kinds.includes(k) ? F.kinds.filter(x => x !== k) : [...F.kinds, k]; drawKinds(); }, box);
+    const h = hints[0];
+    $('[data-kindhint]').innerHTML = h ? `<button class="kind-hint" data-hintkind="${h.kind}">${icon('sparkle', 18)}<span>По тегу «${esc(h.tag)}» похоже на ${kindById(h.kind).acc} — нажмите, чтобы отметить</span></button>` : '';
+    $('[data-hintkind]')?.addEventListener('click', e => { F.kinds = [...F.kinds, e.currentTarget.dataset.hintkind]; drawKinds(); });
+    $('[data-kindhint]').style.display = h ? '' : 'none';
+  };
+  drawCover(); drawTags(); drawKinds(); drawMapPrev();
   on('[data-act=save]', 'click', async (e, btn) => {
     if (!F.name.trim()) { toast('Напишите название места'); $('#f-name').focus(); return; }
     btn.disabled = true; btn.textContent = 'Сохраняем…';
     try {
       const row = { name: F.name.trim(), group_id: F.group_id, tags: F.tags, instagram: F.instagram.trim() || null, address: F.address.trim() || null, note: F.note.trim() || null };
       row.lat = F.lat; row.lng = F.lng;
+      if (S.hasKinds) row.kinds = F.kinds;
       if (row.lat == null && row.address) { // точку ещё не нашли — пробуем по адресу (не дольше 6 секунд)
         const c = await Promise.race([coordsFor(row.address, row.group_id), new Promise(r => setTimeout(() => r(null), 6000))]);
         if (c) { row.lat = c.lat; row.lng = c.lng; }
@@ -1239,6 +1285,402 @@ function switchSpaceSheet() {
       toast('Вы в общем списке!');
     } catch (err) { handleErr(err); btn.disabled = false; }
   };
+}
+
+// =========================================================
+// Комната
+// =========================================================
+const cupsWord = n => plural(n, 'стаканчик', 'стаканчика', 'стаканчиков');
+const cupsGen = n => plural(n, 'стаканчика', 'стаканчиков', 'стаканчиков'); // «не хватает 1 стаканчика»
+const thingsWord = n => plural(n, 'вещь', 'вещи', 'вещей');
+function roomCalc() {
+  const { stats, got } = computeAchievements(S);
+  const have = S.demo && /[?&]full/.test(location.search) ? new Set(ITEMS.map(i => i.id)) : ownedSet(S.room.owned, got);
+  const bal = cupsBalance(stats, got, S.room.owned);
+  return { stats, got, have, bal };
+}
+const cupsPill = n => `<button class="cups" data-go="#/room/shop" aria-label="Стаканчики">${'<span class="cup-dot">' + icon('cup', 16) + '</span>'}${n}</button>`;
+const needRoomSQL = () => { toast('Нужно один раз запустить 003_room.sql в Supabase — тогда покупки будут сохраняться'); };
+
+async function roomBuy(id) {
+  if (S.demo) { S.room.owned = [...S.room.owned, id]; return; }
+  if (!S.hasRoom) { needRoomSQL(); throw new Error('silent'); }
+  const { data, error } = await sb.rpc('room_buy', { p_space: S.space.id, p_item: id });
+  if (error) throw error;
+  S.room = { owned: data.owned || [], placed: data.placed || {} };
+}
+async function roomPlace(slot, id) {
+  if (S.demo) { S.room.placed = { ...S.room.placed, [slot]: id }; return; }
+  if (!S.hasRoom) { needRoomSQL(); throw new Error('silent'); }
+  const { data, error } = await sb.rpc('room_place', { p_space: S.space.id, p_slot: slot, p_item: id });
+  if (error) throw error;
+  S.room = { owned: data.owned || [], placed: data.placed || {} };
+}
+
+// ----- Сцена: слои из room/*.svg в координатах 720×330
+const pct = (v, of) => (v / of * 100).toFixed(3) + '%';
+const boxStyle = ([x, y, w, h]) => `left:${pct(x, 720)};top:${pct(y, 330)};width:${pct(w, 720)};height:${pct(h, 330)}`;
+const BULBS = [[28, 32], [61, 41], [95, 44], [130, 43], [166, 37], [202, 27], [237, 21], [271, 18], [306, 18], [339, 22]]; // лампочки гирлянды
+const LANTERNS = [[380, 46], [450, 64], [520, 42], [590, 58], [660, 48]];                                              // бумажные фонарики
+const WIN_BOX = [110, 34, 140, 132];      // окно целиком (рама + вид + подоконник)
+const SCREEN_BOX = [384, 68, 164, 98];    // экран проектора — есть всегда
+const CUP_ON_FLOOR = [664, 248, 44, 52.3]; // золотой стаканчик без стеллажа стоит на полу
+function itemBox(it, shown) {
+  if (it.id === 'goldcup' && !shown.some(x => x.id === 'shelving')) return CUP_ON_FLOOR;
+  return it.box;
+}
+// mode: 'room' — как сейчас; 'dream' — все вещи, которых нет, полупрозрачные с замочком
+// в демо можно посмотреть другое время: ?demo&t=night&s=winter
+const wsNow = () => { const q = new URLSearchParams(location.search), w = windowState(); return S.demo ? { season: q.get('s') || w.season, time: q.get('t') || w.time } : w; };
+function sceneHTML({ have, placed, dream = false, ws = wsNow() }) {
+  let shown = arrangement(have, placed);
+  let ghosts = [];
+  if (dream) {
+    const slots = new Set(shown.map(i => i.slot));
+    for (const it of ITEMS) if (!slots.has(it.slot)) { slots.add(it.slot); ghosts.push(it); }
+  }
+  const time = dream ? 'day' : ws.time;
+  const all = [...shown.map(i => ({ it: i, ghost: false })), ...ghosts.map(i => ({ it: i, ghost: true }))]
+    .filter(({ it }) => !(it.id === 'balloon' && time === 'night'))
+    .sort((a, b) => a.it.z - b.it.z);
+  const allShown = all.map(x => x.it);
+  const layer = ({ it, ghost }) => `<img class="l ${it.id === 'balloon' ? 'bal' : ''} ${ghost ? 'ghost' : ''} it-${it.id}" src="${it.art}" alt="" style="${boxStyle(itemBox(it, allShown))};z-index:${it.z}">`;
+  const lit = id => allShown.some(i => i.id === id);
+  const dot = ([x, y], r, cls, i) => `<span class="glow ${cls}" style="${boxStyle([x - r, y - r, r * 2, r * 2])};animation-delay:${-(i * 0.7) % 3.4}s"></span>`;
+  const glows = time === 'day' ? '' : [
+    lit('garland') && BULBS.map((b, i) => dot(b, 20, 'g-bulb', i)).join(''),
+    lit('lanterns') && LANTERNS.map((b, i) => dot(b, 46, 'g-lantern', i)).join(''),
+    lit('film') && `<span class="glow g-screen" style="${boxStyle([370, 56, 192, 122])}"></span>`,
+    lit('goldcup') && `<span class="glow g-cup" style="${boxStyle(itemBox(itemById('goldcup'), allShown).map((v, i) => i < 2 ? v - 14 : v + 28))}"></span>`,
+  ].filter(Boolean).join('');
+  // замочки: по одному на вещь, близко стоящие не наслаиваем
+  const lockAt = [];
+  const locks = dream ? ghosts.map(it => {
+    const [x, y, w, h] = itemBox(it, allShown); const cx = x + w / 2, cy = Math.min(y + h / 2, 300);
+    if (lockAt.some(([a, b]) => Math.hypot(a - cx, b - cy) < 30)) return '';
+    lockAt.push([cx, cy]);
+    return `<span class="lockb" style="left:${pct(cx, 720)};top:${pct(cy, 330)}">${icon('lock', 12)}</span>`;
+  }).join('') : '';
+  return `<div class="scene t-${time}"><span class="snap" style="left:0"></span><span class="snap" style="left:50%"></span>
+    <img class="l" src="room/bg.svg" alt="" style="${boxStyle([0, 0, 720, 330])};z-index:0">
+    <img class="l win" src="room/win-${ws.season}-${time}.svg" alt="" style="${boxStyle(WIN_BOX)};z-index:10">
+    <img class="l" src="room/screen.svg" alt="" style="${boxStyle(SCREEN_BOX)};z-index:22">
+    ${all.map(layer).join('')}${glows}${locks}
+  </div>`;
+}
+// ночной и вечерний свет — фильтры для слоёв (кроме окна, у него свои картинки)
+const FILTERS_SVG = `<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="f-night"><feColorMatrix type="matrix" values="0.566 0 0 0 0  0 0.622 0 0 0  0 0 0.846 0 0  0 0 0 1 0"/></filter>
+  <filter id="f-evening"><feColorMatrix type="matrix" values="1 0 0 0 0  0 0.92 0 0 0  0 0 0.82 0 0  0 0 0 1 0"/></filter></svg>`;
+
+function renderRoomRoute(sub, q) {
+  S.ctxGroup = null;
+  if (sub === 'shop') return renderShop(q);
+  if (sub === 'ach') return renderAchievements();
+  if (sub === 'inv') return renderInventory();
+  if (sub === 'dream') return renderDream();
+  renderRoom();
+}
+
+function renderRoom() {
+  const R = roomCalc();
+  const empty = R.have.size === 0;
+  app.innerHTML = `${FILTERS_SVG}<div class="screen">
+    <div class="head"><button class="round" data-go="#/" aria-label="Назад">${icon('back')}</button>${cupsPill(R.bal.balance)}</div>
+    <div class="col"><span class="hand-m accent">${empty ? 'пока пустовато' : 'уютно у нас'}</span><h1 class="h1">Наша комната</h1></div>
+    <div class="stack-s">
+      <div class="scene-vp" data-vp>${sceneHTML({ have: R.have, placed: S.room.placed })}<div class="scene-hot" data-hot></div></div>
+      <div class="row between"><div class="row" style="gap:6px" data-dots><span class="dot on"></span><span class="dot"></span><span class="t-sub" style="margin-left:6px" data-hint>листайте →</span></div>
+        <button class="pill-btn" data-go="#/room/dream">${icon('sparkle', 16)}Комната мечты</button></div>
+    </div>
+    ${empty ? `<div class="note"><div class="hand-m">как это работает</div><div class="t-body">За походы вместе — достижения и стаканчики: +1 за каждый визит и награды за достижения. На стаканчики покупаются вещи, и комната становится уютнее.</div></div>` : ''}
+    ${!S.hasRoom && !S.demo ? `<div class="kind-hint" style="cursor:default">${icon('lock', 18)}<span>Чтобы покупки сохранялись, нужно один раз запустить <b>003_room.sql</b> в Supabase (SQL Editor).</span></div>` : ''}
+    <div class="room-tiles">
+      <button class="card rtile" data-go="#/room/inv"><span class="bub" style="background:var(--sage)">${icon('box')}</span><span class="t-cards">Инвентарь</span><span class="t-sub">${R.have.size ? `${R.have.size} ${thingsWord(R.have.size)}` : 'пусто'}</span></button>
+      <button class="card rtile" data-go="#/room/shop"><span class="bub" style="background:var(--peach)">${icon('bag')}</span><span class="t-cards">Магазин</span><span class="t-sub">${SHOP.length} товаров</span></button>
+      <button class="card rtile" data-go="#/room/ach"><span class="bub" style="background:var(--butter)">${icon('star')}</span><span class="t-cards">Достижения</span><span class="t-sub">${R.got.size} из ${ACHIEVEMENTS.length}</span></button>
+    </div>
+    <button class="link-btn" data-go="#/invite" style="align-self:center;font-size:15px">Участники и код приглашения</button>
+  </div>${navHTML('')}`;
+  bindCommon();
+  bindScene(R);
+  checkStorageWarning();
+}
+
+// листание половинок, нажатие на экран проектора и на места с вещами
+function bindScene(R) {
+  const vp = $('[data-vp]'); if (!vp) return;
+  const dots = $('[data-dots]');
+  vp.addEventListener('scroll', () => {
+    const right = vp.scrollLeft > vp.clientWidth / 2;
+    dots.children[0].classList.toggle('on', !right); dots.children[1].classList.toggle('on', right);
+    $('[data-hint]').textContent = right ? '← обратно' : 'листайте →';
+  }, { passive: true });
+  $('[data-hint]').onclick = () => vp.scrollTo({ left: vp.scrollLeft > 10 ? 0 : vp.scrollWidth, behavior: 'smooth' });
+  // зоны нажатия: экран проектора — «Наша плёнка», вещи — что поставить на это место
+  const hot = $('[data-hot]');
+  const shown = arrangement(R.have, S.room.placed);
+  const slots = new Set(ITEMS.filter(it => R.have.has(it.id)).map(it => it.slot));
+  const zones = [...slots].map(slot => {
+    const its = ITEMS.filter(i => i.slot === slot);
+    const cur = shown.find(i => i.slot === slot) || its.find(i => R.have.has(i.id));
+    return { slot, box: cur.box, z: cur.z };
+  }).sort((a, b) => a.z - b.z);
+  hot.innerHTML = `<button class="hz" data-screen aria-label="Экран проектора" style="${boxStyle(SCREEN_BOX)};z-index:21"></button>` +
+    zones.map(zn => `<button class="hz" data-slot="${zn.slot}" aria-label="${esc(SLOT_NAMES[zn.slot])}" style="${boxStyle(zn.box)};z-index:${zn.z}"></button>`).join('');
+  hot.querySelector('[data-screen]').onclick = () => screenPill(hot);
+  hot.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => slotSheet(b.dataset.slot));
+}
+// нажали на экран — всплывает «Наша плёнка», нажали ещё раз — открывается
+function screenPill(hot) {
+  let pill = hot.querySelector('.film-pill');
+  if (pill) { pill.remove(); return storageSheet(); }
+  pill = document.createElement('button');
+  pill.className = 'film-pill'; pill.innerHTML = `${icon('film', 16)}Наша плёнка`;
+  pill.style.cssText = `left:${pct(466, 720)};top:${pct(117, 330)}`;
+  pill.onclick = e => { e.stopPropagation(); pill.remove(); storageSheet(); };
+  hot.appendChild(pill);
+  setTimeout(() => pill.remove(), 4000);
+}
+
+// ----- 23 Выбор вещи для места
+function slotSheet(slot) {
+  const R = roomCalc();
+  const its = ITEMS.filter(i => i.slot === slot);
+  const cur = arrangement(R.have, S.room.placed).find(i => i.slot === slot);
+  let sel = cur?.id || its.find(i => R.have.has(i.id))?.id;
+  const { el, close } = openSheet('<div data-body class="stack-m" style="gap:20px"></div>');
+  const body = el.querySelector('[data-body]');
+  const draw = () => {
+    body.innerHTML = `<div class="stack-xs"><h2 class="h2">${esc(SLOT_NAMES[slot])}</h2><span class="t-sub">${its.length > 1 ? 'Что поставим сюда?' : 'Эта вещь стоит здесь'}</span></div>
+      <div class="pick-row">${its.map(it => {
+        const own = R.have.has(it.id);
+        const st = it.id === cur?.id ? 'стоит' : own ? 'в инвентаре' : it.price ? 'в магазине' : 'трофей';
+        return `<button class="pick ${sel === it.id ? 'on' : ''} ${own ? '' : 'off'}" data-it="${it.id}"><span class="pick-img" style="background:var(--${it.tile})"><img src="${it.art}" alt=""></span>
+          <span class="t-cap">${esc(it.name)}</span><span class="t-sub" style="font-size:13px">${st}</span></button>`;
+      }).join('')}</div>
+      <div class="col" style="gap:4px"><button class="btn" data-put ${!sel || sel === cur?.id || !R.have.has(sel) ? 'disabled' : ''}>Поставить</button>
+      ${cur ? `<button class="link-btn danger" data-rm style="padding:8px">Убрать с этого места</button>` : ''}</div>`;
+    body.querySelectorAll('[data-it]').forEach(b => b.onclick = () => {
+      const it = itemById(b.dataset.it);
+      if (!R.have.has(it.id)) { close(); return itemSheet(it); }
+      sel = it.id; draw();
+    });
+    body.querySelector('[data-put]').onclick = async e => {
+      e.currentTarget.disabled = true;
+      try { await roomPlace(slot, sel); close(); render(); } catch (err) { if (err.message !== 'silent') handleErr(err); }
+    };
+    body.querySelector('[data-rm]')?.addEventListener('click', async () => {
+      try { await roomPlace(slot, null); close(); render(); toast('Убрали в инвентарь'); } catch (err) { if (err.message !== 'silent') handleErr(err); }
+    });
+  };
+  draw();
+}
+
+// ----- 24 Магазин
+function renderShop(q) {
+  const R = roomCalc();
+  const cat = q.get('c') || 'all';
+  const list = ITEMS.filter(it => cat === 'all' ? true : cat === 'trophy' ? !it.price : it.cat === cat && (it.price || cat !== 'all'));
+  app.innerHTML = `<div class="screen">
+    <div class="head"><div class="title"><button class="round" data-go="#/room" aria-label="Назад">${icon('back')}</button><h1 class="h1">Магазин</h1></div>${cupsPill(R.bal.balance)}</div>
+    <div class="chips">${CATS.map(([k, n]) => `<button class="chip ${cat === k ? 'active' : ''}" data-go="#/room/shop${k === 'all' ? '' : '?c=' + k}">${n}</button>`).join('')}</div>
+    <div class="grid2">${list.map(it => shopCardHTML(it, R)).join('')}</div>
+    <p class="t-sub center" style="margin:0">Трофеи не продаются — только заслужить достижениями.</p>
+  </div>${navHTML('')}`;
+  bindCommon();
+  on('[data-item]', 'click', (e, el) => itemSheet(itemById(el.dataset.item)));
+}
+function priceTag(it, R) {
+  if (R.have.has(it.id)) return `<span class="ptag own">${icon('check', 16)}есть</span>`;
+  if (!it.price) return `<span class="ptag trophy">${icon('trophy', 16)}трофей</span>`;
+  return `<span class="ptag ${R.bal.balance >= it.price ? '' : 'dim'}">${icon('cup', 16)}${it.price}</span>`;
+}
+function shopCardHTML(it, R) {
+  return `<button class="card scard" data-item="${it.id}"><span class="scard-img" style="background:var(--${it.tile})"><img src="${it.art}" alt="" loading="lazy"></span>
+    <span class="t-cards">${esc(it.name)}</span>${priceTag(it, R)}</button>`;
+}
+function itemSheet(it) {
+  const R = roomCalc();
+  const own = R.have.has(it.id);
+  const ach = it.price ? null : ACHIEVEMENTS.find(a => a.item === it.id);
+  const lack = it.price ? it.price - R.bal.balance : 0;
+  const placedNow = arrangement(R.have, S.room.placed).some(x => x.id === it.id);
+  const { el, close } = openSheet(`<div class="item-hero" style="background:var(--${it.tile})"><img src="${it.art}" alt=""></div>
+    <div class="stack-xs"><h2 class="h2">${esc(it.name)}</h2><span class="t-sub">${esc([it.note, SLOT_NAMES[it.slot]].filter(Boolean).join(' · '))}</span></div>
+    ${ach ? `<div class="kind-hint" style="cursor:default">${icon('trophy', 18)}<span>Трофей за «${esc(ach.name)}»: ${esc(ach.text.toLowerCase())}. ${own ? 'Уже ваш!' : `Сейчас ${Math.min(ach.value(R.stats), ach.goal)} из ${ach.goal}.`}</span></div>` : ''}
+    ${own ? `<button class="btn" data-place ${placedNow ? 'disabled' : ''}>${placedNow ? 'Уже стоит в комнате' : 'Поставить в комнату'}</button>`
+      : it.price ? `<button class="btn" data-buy ${lack > 0 ? 'disabled' : ''}>${icon('cup')}${lack > 0 ? `Не хватает ${lack} ${cupsGen(lack)}` : `Купить за ${it.price}`}</button>
+        <span class="t-sub center" style="margin-top:-8px">У вас ${R.bal.balance} ${cupsWord(R.bal.balance)}${lack > 0 ? ' — +1 за каждый визит и награды за достижения' : ''}</span>`
+      : `<button class="btn ghost on-card" data-ach>К достижениям</button>`}`);
+  el.querySelector('[data-buy]')?.addEventListener('click', async e => {
+    e.currentTarget.disabled = true;
+    try {
+      // что сейчас стоит на этом месте — новая вещь его не сдвигает, а ложится в инвентарь
+      const before = arrangement(R.have, S.room.placed).find(x => x.slot === it.slot);
+      await roomBuy(it.id);
+      if (S.room.placed[it.slot] === null) await roomPlace(it.slot, it.id);          // место было пустым — ставим
+      else if (before && !(it.slot in S.room.placed)) await roomPlace(it.slot, before.id);
+      close(); render(); toast(before ? `Купили! «${it.name}» — в инвентаре` : `Купили! «${it.name}» уже в комнате 💛`);
+    } catch (err) { if (err.message !== 'silent') handleErr(err); e.currentTarget.disabled = false; }
+  });
+  el.querySelector('[data-place]')?.addEventListener('click', async () => {
+    try { await roomPlace(it.slot, it.id); close(); go('#/room'); toast('Поставили'); } catch (err) { if (err.message !== 'silent') handleErr(err); }
+  });
+  el.querySelector('[data-ach]')?.addEventListener('click', () => { close(); go('#/room/ach'); });
+}
+
+// ----- Инвентарь: всё, что у нас есть
+function renderInventory() {
+  const R = roomCalc();
+  const shown = new Set(arrangement(R.have, S.room.placed).map(i => i.id));
+  const list = ITEMS.filter(it => R.have.has(it.id));
+  app.innerHTML = `<div class="screen">
+    <div class="head"><div class="title"><button class="round" data-go="#/room" aria-label="Назад">${icon('back')}</button><h1 class="h1">Инвентарь</h1></div>${cupsPill(R.bal.balance)}</div>
+    ${list.length ? `<p class="t-sub" style="margin:0">Нажмите на вещь, чтобы поставить её или убрать. Ещё можно нажать прямо на вещь в комнате.</p>
+      <div class="grid2">${list.map(it => `<button class="card scard" data-slot="${it.slot}"><span class="scard-img" style="background:var(--${it.tile})"><img src="${it.art}" alt="" loading="lazy"></span>
+        <span class="t-cards">${esc(it.name)}</span><span class="ptag ${shown.has(it.id) ? 'own' : 'plain'}">${shown.has(it.id) ? icon('check', 16) + 'в комнате' : 'в инвентаре'}</span></button>`).join('')}</div>`
+      : `<div class="empty"><div class="stack-xs"><h2 class="h2">Пока пусто</h2><p class="t-body muted" style="margin:0">Купите первую вещь в магазине — стаканчики дают за походы вместе.</p></div><button class="btn" data-go="#/room/shop">В магазин</button></div>`}
+  </div>${navHTML('')}`;
+  bindCommon();
+  on('[data-slot]', 'click', (e, el) => slotSheet(el.dataset.slot));
+}
+
+// ----- 25 Достижения
+function achIconHTML(a, got) { return `<span class="ach-ic ${got ? 'got' : ''}">${icon(a.icon, 22)}</span>`; }
+function rewardHTML(a) { return a.cups ? `<span class="ptag">${icon('cup', 16)}+${a.cups}</span>` : `<span class="ptag trophy">${icon('trophy', 16)}${esc(itemById(a.item).name)}</span>`; }
+function renderAchievements() {
+  const R = roomCalc();
+  const done = ACHIEVEMENTS.filter(a => R.got.has(a.id)).sort((a, b) => R.got.get(b.id).localeCompare(R.got.get(a.id)));
+  const todo = ACHIEVEMENTS.filter(a => !R.got.has(a.id)).sort((a, b) => (b.value(R.stats) / b.goal) - (a.value(R.stats) / a.goal));
+  const card = a => {
+    const g = R.got.has(a.id), v = Math.min(a.value(R.stats), a.goal);
+    return `<button class="card ach ${g ? '' : 'todo'}" data-ach="${a.id}">${achIconHTML(a, g)}
+      <span class="col grow" style="gap:2px"><span class="t-cards">${esc(a.name)}</span><span class="t-sub">${esc(a.text)}</span>
+      ${g ? `<span class="t-cap accent">${fmtDate(R.got.get(a.id))}</span>` : `<span class="bar"><span style="width:${(v / a.goal * 100).toFixed(1)}%"></span></span><span class="t-cap muted">${v}/${a.goal}</span>`}</span>
+      ${rewardHTML(a)}</button>`;
+  };
+  app.innerHTML = `<div class="screen">
+    <div class="head"><button class="round" data-go="#/room" aria-label="Назад">${icon('back')}</button><span class="cups static">${R.got.size} из ${ACHIEVEMENTS.length}</span></div>
+    <div class="col"><span class="hand-m accent">за походы вместе</span><h1 class="h1">Достижения</h1></div>
+    <div class="col" style="gap:10px">${done.map(card).join('')}${todo.map(card).join('')}</div>
+  </div>${navHTML('')}`;
+  bindCommon();
+  on('[data-ach]', 'click', (e, el) => achSheet(achById(el.dataset.ach)));
+}
+// 36 Достижение подробно: что считается и какие места уже засчитаны
+function achSheet(a) {
+  const R = roomCalc();
+  const g = R.got.has(a.id), v = Math.min(a.value(R.stats), a.goal), left = a.goal - v;
+  const k = a.kind ? kindById(a.kind) : null;
+  const counted = k ? S.places.filter(p => (p.kinds || []).includes(k.id) && isBeen(p)) : [];
+  openSheet(`<div class="row" style="gap:14px">${achIconHTML(a, true).replace('ach-ic', 'ach-ic big')}<div class="col grow" style="gap:2px"><h2 class="h2">${esc(a.name)}</h2>
+      <span class="t-sub">${esc(a.text)} · ${a.cups ? `+${a.cups} ${cupsWord(a.cups)}` : `трофей «${esc(itemById(a.item).name)}»`}</span></div></div>
+    <div class="stack-xs"><div class="row between"><span class="t-bold">${v} из ${a.goal}</span><span class="t-bold accent">${g ? `получено ${fmtDayMonth(R.got.get(a.id))}` : `ещё ${left}`}</span></div>
+      <span class="bar big"><span style="width:${(v / a.goal * 100).toFixed(1)}%"></span></span></div>
+    ${k ? `<div class="card info" style="background:var(--paper)"><div class="row wrap" style="gap:8px"><span class="t-body">${a.visitsKind ? 'Считаются походы в места с отметкой' : 'Считаются разные места с отметкой'}</span><span class="chip kind on">${icon('kind-' + k.id, 18)}${k.name}</span></div>
+      <span class="t-sub">${a.visitsKind ? 'Каждый визит засчитывается отдельно.' : 'Повторный визит в то же место не добавляет.'} Отметка ставится в карточке места: «Что это за место?».</span></div>
+      ${counted.length ? `<div class="stack-xs"><span class="t-bold">Уже засчитаны</span><div class="chips">${counted.slice(0, 8).map(p => `<span class="chip paper">${esc(shortName(p.name))}</span>`).join('')}${counted.length > 8 ? `<span class="chip paper">+ ещё ${counted.length - 8}</span>` : ''}</div></div>` : ''}` : ''}`);
+}
+
+// ----- 26 Новое достижение
+function maybeCelebrate() {
+  if (!S.space || document.querySelector('.overlay') || isFormRoute() || (!S.session && !S.demo)) return;
+  const R = roomCalc();
+  const key = 'shodim-ach-' + S.space.id;
+  let seen = null; try { seen = JSON.parse(localStorage.getItem(key) || 'null'); } catch { /* пусто */ }
+  if (!Array.isArray(seen)) { try { localStorage.setItem(key, JSON.stringify([...R.got.keys()])); } catch { /* нет места */ } return; }
+  const fresh = [...R.got.keys()].filter(id => !seen.includes(id));
+  if (!fresh.length) return;
+  seen.push(fresh[0]); try { localStorage.setItem(key, JSON.stringify(seen)); } catch { /* нет места */ }
+  achModal(achById(fresh[0]), () => setTimeout(maybeCelebrate, 300));
+}
+function achModal(a, after) {
+  const it = a.item ? itemById(a.item) : null;
+  const conf = Array.from({ length: 14 }, (_, i) => `<i style="left:${(i * 37) % 100}%;top:${(i * 53) % 90}%;background:var(--${['peach', 'sage', 'butter', 'sky', 'rose'][i % 5]});transform:rotate(${i * 47}deg)"></i>`).join('');
+  const { el, close } = openSheet(`<div class="confetti">${conf}</div>
+    <div class="col center" style="align-items:center;gap:6px;position:relative">
+      <span class="ach-ic big got" style="width:84px;height:84px">${it ? `<img src="${it.art}" alt="" style="width:60px;height:60px;object-fit:contain">` : icon(a.icon, 34)}</span>
+      <span class="hand-m accent" style="margin-top:8px">новое достижение!</span><h2 class="h2">${esc(a.name)}</h2><span class="t-sub">${esc(a.text)}</span>
+      <span class="ptag" style="margin-top:8px;padding:8px 16px">${a.cups ? `${icon('cup', 18)}+${a.cups} ${cupsWord(a.cups)}` : `${icon('trophy', 18)}трофей: ${esc(it.name)}`}</span></div>
+    <div class="col" style="gap:4px;position:relative"><button class="btn" data-ok>Ура!</button><button class="link-btn danger" data-more>${a.cups ? 'В магазин' : 'Посмотреть в комнате'}</button></div>`, { center: true, onClose: after });
+  el.querySelector('[data-ok]').onclick = close;
+  el.querySelector('[data-more]').onclick = () => { close(); go(a.cups ? '#/room/shop' : '#/room'); };
+}
+
+// ----- 33 Комната мечты: всё целиком, чего нет — с замочком
+function renderDream() {
+  const R = roomCalc();
+  const total = ITEMS.length, n = ITEMS.filter(it => R.have.has(it.id)).length;
+  const next = SHOP.filter(it => !R.have.has(it.id)).sort((a, b) => a.price - b.price)[0];
+  const hint = next ? (R.bal.balance >= next.price ? `Уже хватает на «${next.name}» — загляните в магазин!` : `Ближайшее: ${next.name.toLowerCase()}, не хватает ${next.price - R.bal.balance} ${cupsGen(next.price - R.bal.balance)}.`) : 'Все вещи из магазина уже ваши!';
+  const half = side => `<div class="scene-half ${side}">${sceneHTML({ have: R.have, placed: S.room.placed, dream: true })}</div>`;
+  app.innerHTML = `${FILTERS_SVG}<div class="screen">
+    <div class="head"><button class="round" data-go="#/room" aria-label="Назад">${icon('back')}</button><span class="pill-btn static" style="background:var(--butter)">${icon('sparkle', 16)}предпросмотр</span></div>
+    <div class="col"><span class="hand-m accent">когда соберём всё</span><h1 class="h1">Комната мечты</h1></div>
+    ${half('left')}${half('right')}
+    <div class="card stack-xs" style="padding:14px 16px"><div class="row between"><span class="t-bold">Уже собрано ${n} из ${total} ${plural(total, 'вещи', 'вещей', 'вещей')}</span><span class="t-bold accent">${Math.round(n / total * 100)}%</span></div>
+      <span class="bar big"><span style="width:${(n / total * 100).toFixed(1)}%"></span></span>
+      <span class="t-sub">С замочком — то, что ещё впереди. ${esc(hint)}</span></div>
+    <button class="btn" data-go="#/room">Вернуться в нашу комнату</button>
+  </div>`;
+  bindCommon();
+}
+
+// ----- 30–32 «Наша плёнка»: сколько места занимают фото
+const STORAGE_LIMIT = 1024 ** 3; // бесплатный Supabase — 1 ГБ
+async function fetchUsage() {
+  if (S.demo) return { bytes: 184 * 1024 ** 2, files: 540 };
+  const { data, error } = await sb.rpc('storage_usage', { p_space: S.space.id });
+  if (error) throw error;
+  const r = Array.isArray(data) ? data[0] : data;
+  return { bytes: Number(r?.bytes || 0), files: Number(r?.files || 0) };
+}
+const fmtMB = b => b >= 1024 ** 3 ? (b / 1024 ** 3).toFixed(2).replace('.', ',') + ' ГБ' : Math.round(b / 1024 ** 2) + ' МБ';
+function filmStrip(p) {
+  const N = 12, full = p * N;
+  return `<div class="film-strip">${Array.from({ length: N }, (_, i) => `<span class="fr ${i < Math.floor(full) ? 'on c' + (i % 4) : ''}">${i === Math.floor(full) && full % 1 > .05 ? `<i style="height:${(full % 1 * 100).toFixed(0)}%"></i>` : ''}</span>`).join('')}</div>`;
+}
+async function storageSheet() {
+  const { el, close } = openSheet(`<div class="stack-xs"><span class="hand-m accent">проектор рассказывает</span><h2 class="h2">Наша плёнка</h2><span class="t-sub">Место для фото в нашем облаке</span></div><div data-body><p class="t-sub">Считаем…</p></div>`);
+  const body = el.querySelector('[data-body]');
+  try {
+    const u = await fetchUsage();
+    const p = Math.min(1, u.bytes / STORAGE_LIMIT), avg = u.files ? u.bytes / u.files : 350 * 1024;
+    const left = Math.max(0, Math.floor((STORAGE_LIMIT - u.bytes) / avg));
+    body.className = 'stack-m';
+    body.innerHTML = `${filmStrip(p)}
+      <div class="row between" style="align-items:flex-end"><div class="col"><span class="h2">${fmtMB(u.bytes)}</span><span class="t-sub">занято из 1 ГБ · ${u.files} ${plural(u.files, 'файл', 'файла', 'файлов')}</span></div><span class="t-sec ${p >= .8 ? 'accent' : 'muted'}">${Math.round(p * 100)}%</span></div>
+      <div class="note row" style="gap:12px;align-items:flex-start"><span class="round" style="width:40px;height:40px;color:var(--accent)">${icon('film', 20)}</span>
+        <div class="col"><span class="t-bold">Хватит ещё примерно на ${left.toLocaleString('ru')} фото</span><span class="t-sub">Фото сжимаются при загрузке — в среднем ${Math.round(avg / 1024)} КБ</span></div></div>
+      <button class="btn" data-ok>Понятно</button>`;
+    body.querySelector('[data-ok]').onclick = close;
+  } catch (err) {
+    console.warn(err);
+    body.innerHTML = `<p class="t-sub" style="margin:0">Не получилось посчитать. Если это первый запуск — нужно один раз выполнить 003_room.sql в Supabase.</p>`;
+  }
+}
+// 32 Плёнка заканчивается — сами предупреждаем при 80%+, «Напомнить позже» = через неделю или +5%
+async function checkStorageWarning() {
+  if (S.storageChecked) return; S.storageChecked = true;
+  if (S.demo && !/storagewarn/.test(location.search)) return;
+  try {
+    const u = S.demo ? { bytes: 860 * 1024 ** 2, files: 2500 } : await fetchUsage();
+    const p = u.bytes / STORAGE_LIMIT;
+    if (p < .8) return;
+    let sn = null; try { sn = JSON.parse(localStorage.getItem('shodim-film-snooze') || 'null'); } catch { /* пусто */ }
+    if (sn && Date.now() < sn.until && p < sn.p + .05) return;
+    if (document.querySelector('.overlay')) return;
+    const avg = u.files ? u.bytes / u.files : 350 * 1024, left = Math.max(0, Math.floor((STORAGE_LIMIT - u.bytes) / avg));
+    const { el, close } = openSheet(`<div class="col center" style="align-items:center;gap:6px"><span class="ach-ic big got" style="background:var(--rose)">${icon('film', 30)}</span>
+        <span class="hand-m accent" style="margin-top:6px">небольшое предупреждение</span><h2 class="h2">Плёнка заканчивается</h2>
+        <span class="t-sub">Занято ${Math.round(p * 100)}% — места примерно на ${left.toLocaleString('ru')} фото. Можно удалить лишние фото или увеличить место в облаке.</span></div>
+      ${filmStrip(Math.min(1, p))}
+      <div class="col" style="gap:4px"><button class="btn" data-see>Посмотреть плёнку</button><button class="link-btn" data-later>Напомнить позже</button></div>`, { center: true });
+    const later = () => { try { localStorage.setItem('shodim-film-snooze', JSON.stringify({ until: Date.now() + 7 * 864e5, p })); } catch { /* нет места */ } };
+    el.querySelector('[data-see]').onclick = () => { later(); close(); storageSheet(); };
+    el.querySelector('[data-later]').onclick = () => { later(); close(); };
+  } catch (e) { console.warn(e); }
 }
 
 // =========================================================
@@ -1532,11 +1974,11 @@ function seedDemo() {
     G('g3', 'Италия', 'trip', 'sky', { trip_status: 'dream' }), G('g4', 'Грузия', 'trip', 'butter', { trip_status: 'planned', trip_start: '2027-05-10' })];
   const P = (id, gid, name, tags, extra = {}) => ({ id, space_id: 'demo', group_id: gid, name, tags, want_again: false, created_at: '', ...extra });
   S.places = [
-    P('p1', 'g1', 'Кофейня «Зерно»', ['кафе'], { instagram: '@zerno.coffee', address: 'ул. Зыбицкая, 6', note: 'Говорят, тут лучшие круассаны в городе. Идти утром в выходные!', want_again: true }),
-    P('p2', 'g1', 'Выставка керамики', ['выставки'], { note: 'До 30 ноября' }),
-    P('p3', 'g1', 'Ботанический сад', ['природа']),
+    P('p1', 'g1', 'Кофейня «Зерно»', ['кафе'], { kinds: ['cafe'], instagram: '@zerno.coffee', address: 'ул. Зыбицкая, 6', note: 'Говорят, тут лучшие круассаны в городе. Идти утром в выходные!', want_again: true }),
+    P('p2', 'g1', 'Выставка керамики', ['выставки'], { kinds: ['art'], note: 'До 30 ноября' }),
+    P('p3', 'g1', 'Ботанический сад', ['природа'], { kinds: ['nature'] }),
     P('p4', 'g1', 'Бар «Лампа»', ['на выходные'], { instagram: 'https://www.instagram.com/some.very.long.place.name.minsk/', address: 'https://yandex.by/maps/157/minsk/?ll=27.553463%2C53.897114&mode=poi&poi%5Bpoint%5D=27.553399%2C53.897201&poi%5Buri%5D=ymapsbm1%3A%2F%2Forg%3Foid%3D123', note: 'Оченьдлинноесловобезпробеловкотороенедолжновылезатьзакрайэкрана' }),
-    P('p5', 'g2', 'Пекарня у вокзала', ['кафе']),
+    P('p5', 'g2', 'Пекарня у вокзала', ['кафе'], { kinds: ['cafe'] }),
     P('p6', 'g2', 'Крыша на закате', ['природа']),
     P('p7', 'g3', 'Колизей', ['музеи']),
     P('p8', 'g4', 'Серные бани', ['на выходные']),
@@ -1553,6 +1995,10 @@ function seedDemo() {
     return 'demo/' + id;
   };
   const F = (id, vid, path, n) => ({ id, space_id: 'demo', visit_id: vid, path, sort_order: n });
+  S.hasRoom = S.hasKinds = true;
+  S.room = { owned: ['armchair', 'garland'], placed: {} };
+  if (new URLSearchParams(location.search).has('full')) S.room.owned = SHOP.map(i => i.id);
+  try { localStorage.setItem('shodim-ach-demo', JSON.stringify(ACHIEVEMENTS.map(a => a.id))); } catch { /* нет места */ }
   S.photos = [F('f1', 'v3', fake('a', '#CFE0C3', '#8FAE82'), 0), F('f2', 'v3', fake('b', '#E4EEDD', '#B5CBA8'), 1), F('f3', 'v3', fake('c', '#D3E0C9', '#6F8A64'), 2),
     F('f4', 'v4', fake('d', '#F8E4E5', '#DDAEB2'), 0), F('f5', 'v4', fake('e', '#FBF2D8', '#E5CF8E'), 1), F('f6', 'v1', (S.urls.set('demo/tall', 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="540"><rect width="300" height="540" fill="#CFDDE6"/><circle cx="150" cy="170" r="60" fill="#F0CFD1"/><rect x="80" y="250" width="140" height="220" rx="40" fill="#8FB3CC"/></svg>')), 'demo/tall'), 0)];
 }
@@ -1569,6 +2015,8 @@ function seedDemo() {
       vmenu: () => { const v = S.visits.find(x => x.id === id); visitMenu(placeById(v.place_id), v); },
       addtravel: () => addPlace(), switch: () => switchSpaceSheet(), viewer: () => document.querySelector('[data-ph="1"]')?.click(), viewer2: () => { const v = [...document.querySelectorAll('[data-ph]')]; v[v.length - 2]?.click(); },
       pick: () => pickPoint({ lat: 53.9071, lng: 27.5529, title: 'Кофейня «Зерно»', onDone: () => {} }),
+      ach: () => achModal(achById(id || 'regulars')), achd: () => achSheet(achById(id || 'gourmets')), slot: () => slotSheet(id || 'floorL'),
+      item: () => itemSheet(itemById(id || 'sofa')), film: () => storageSheet(),
       date: () => dateSheet({ value: '2026-09-14', sub: 'Кофейня «Зерно»', onPick: () => {} }), date2: () => dateSheet({ sub: 'Кофейня «Зерно»', onPick: () => {} }),
     }[what];
     open?.();

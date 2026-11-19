@@ -1,6 +1,6 @@
 // Сервис-воркер: кэширует оболочку приложения, чтобы оно быстро открывалось.
 // Данные и фото всегда берутся из сети (Supabase).
-const VERSION = 'shodim-v16';
+const VERSION = 'shodim-v17';
 const SHELL = ['./', 'index.html', 'styles.css', 'js/app.js', 'js/config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {

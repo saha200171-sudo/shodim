@@ -322,7 +322,12 @@ function parseRoute() {
   return { parts: path.split('/').filter(Boolean), q: new URLSearchParams(qs || '') };
 }
 const go = h => { const t = h.startsWith('#') ? h : '#' + h; if (location.hash === t) render(); else location.hash = t; };
-window.addEventListener('hashchange', () => { render(); scrollTo(0, 0); });
+window.addEventListener('hashchange', e => {
+  // запоминаем, откуда открыли форму нового места, чтобы «Назад» вёл туда же
+  const oldHash = (() => { try { return new URL(e.oldURL).hash; } catch { return ''; } })();
+  if (/^#\/new/.test(location.hash) && !/^#\/new/.test(oldHash)) S.cameFrom = oldHash || '#/';
+  render(); scrollTo(0, 0);
+});
 
 function render() {
   document.querySelectorAll('.overlay').forEach(o => o.remove());
@@ -367,6 +372,16 @@ function longPress(el, fn) {
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
 function addPlace() {
+  // на странице «Путешествия» — место добавляется в поездку, а не в первый город
+  if (!S.ctxGroup && parseRoute().parts[0] === 'travel') {
+    const ts = trips();
+    if (!ts.length) { toast('Сначала создайте поездку'); return groupSheet(null, 'trip'); }
+    if (ts.length === 1) return go('#/new?g=' + ts[0].id);
+    const { el, close } = openSheet(`<div class="stack-xs"><h2 class="h2">Куда добавить место?</h2><span class="t-sub">Выберите поездку</span></div>
+      <div class="stack-s">${ts.map(t => { const st = tripStatus(t); return `<button class="radio" data-t="${t.id}"><span class="dot"></span><span class="col"><span class="t-bold">${esc(t.name)}</span><span class="t-sub">${esc(st.text)}</span></span></button>`; }).join('')}</div>`);
+    el.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { close(); go('#/new?g=' + b.dataset.t); });
+    return;
+  }
   const gid = S.ctxGroup || cities()[0]?.id || S.groups[0]?.id;
   if (!gid) { toast('Сначала создайте группу'); return groupSheet(null, 'city'); }
   go('#/new?g=' + gid);
@@ -725,7 +740,12 @@ function renderForm(id, q) {
   </div><div class="fade"></div><button class="btn cta" data-act="save">${p ? 'Сохранить' : 'Добавить место'}</button>`;
   on('[data-f]', 'input', (e, el) => { F[el.dataset.f] = el.value; });
   on('[data-f]', 'change', (e, el) => { F[el.dataset.f] = el.value; });
-  on('[data-act=back]', 'click', () => go(p ? '#/p/' + p.id : '#/g/' + F.group_id));
+  // «Назад»: из нового места — туда, откуда пришли (например, в «Путешествия»)
+  on('[data-act=back]', 'click', () => {
+    if (p) return go('#/p/' + p.id);
+    if (S.cameFrom) return go(S.cameFrom);
+    go('#/g/' + F.group_id);
+  });
   const drawCover = () => {
     const box = $('[data-cover]'), src = coverSrc();
     box.innerHTML = photo(src, hashKey(p?.id || 'new'), { style: 'height:150px', inner: `<div class="row" style="position:absolute;right:10px;bottom:10px;gap:8px;z-index:1">
@@ -1180,6 +1200,7 @@ function seedDemo() {
       newgroup: () => groupSheet(null, 'city'), newtrip: () => groupSheet(null, 'trip'), gmenu: () => groupMenu(groupById(id)),
       pmenu: () => placeMenu(placeById(id)), delgroup: () => deleteGroupDialog(groupById(id)),
       vmenu: () => { const v = S.visits.find(x => x.id === id); visitMenu(placeById(v.place_id), v); },
+      addtravel: () => addPlace(),
       date: () => dateSheet({ value: '2026-09-14', sub: 'Кофейня «Зерно»', onPick: () => {} }), date2: () => dateSheet({ sub: 'Кофейня «Зерно»', onPick: () => {} }),
     }[what];
     open?.();

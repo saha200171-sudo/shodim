@@ -559,9 +559,9 @@ button.input { color: var(--ink); }
 
 /* Комната на компьютере: слева — комната (вровень с заголовком), справа — колонка с разделами */
 @media (min-width: 1024px) {
-  .room-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
-  .room-layout .scene-vp, .room-layout .scene-vp + .row { width: min(100%, calc(66vh * 720 / 330)); margin: 0; }
-  .room-side .room-tiles { grid-template-columns: 1fr; gap: 12px; max-width: none; }
+  .room-layout { display: flex; flex-direction: column; gap: 20px; }
+  .room-layout .scene-vp, .room-layout .scene-vp + .row { width: 100%; margin: 0; }
+  .room-side .room-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; max-width: none; }
   .room-main [data-dots] { display: none; }
   .room-main .scene-vp + .row { justify-content: flex-start; }
   .room-side .rtile { display: grid; grid-template-columns: 48px 1fr; grid-template-rows: auto auto; column-gap: 14px; row-gap: 0; align-items: center; text-align: left; padding: 14px 16px; }

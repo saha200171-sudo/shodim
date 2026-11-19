@@ -689,10 +689,12 @@ function renderPlace(id) {
         ${p.address ? `<a class="irow" href="${esc(mapHref(p))}" target="_blank" rel="noopener"><span class="bubble" style="background:var(--sage)">${icon('pin', 20)}</span><span class="col grow"><span class="t-sub">${isUrl(p.address) ? 'Карта' : 'Адрес'}</span><span class="t-bold">${esc(isUrl(p.address) ? mapLabel(p.address) : p.address)}</span></span><span class="ext">${icon('ext', 20)}</span></a>` : ''}
       </div>` : ''}
       ${p.note ? `<div class="note"><div class="hand-m">заметка</div><div class="t-body">${esc(p.note)}</div></div>` : ''}
+      <div class="stack-s">
       <div class="row" style="gap:8px"><h2 class="t-sec">Наши визиты</h2>${vs.length ? `<span class="t-sec muted">${vs.length}</span>` : ''}</div>
-      ${vs.length ? vs.map(v => `<button class="card visit" data-vid="${v.id}">${photo(visitImg(v), hashKey(v.id))}
-        <span class="col grow"><span class="t-bold">${fmtDate(v.visited_on)}</span>${v.note ? `<span class="t-sub">${esc(v.note)}</span>` : ''}</span></button>`).join('')
+      ${vs.length ? `<div class="col" style="gap:8px">${vs.map(v => `<button class="card visit" data-vid="${v.id}">${photo(visitImg(v), hashKey(v.id))}
+        <span class="col grow"><span class="t-bold">${fmtDate(v.visited_on)}</span>${v.note ? `<span class="t-sub">${esc(v.note)}</span>` : ''}</span></button>`).join('')}</div>`
         : `<p class="t-sub" style="margin:0">Ещё не были. Когда сходите — нажмите кнопку внизу и добавьте дату и фото.</p>`}
+      </div>
     </div>
     <div class="fade"></div>
     <button class="btn cta" data-act="visit">${icon('check')}Мы тут были!</button>`;

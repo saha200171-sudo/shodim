@@ -619,8 +619,9 @@ button.input { color: var(--ink); }
 
 /* Форма места на компьютере: фото слева (остаётся на месте), поля справа, «Сохранить» — в конце полей */
 @media (min-width: 1024px) {
-  .screen.page { max-width: 1100px; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); column-gap: 40px; row-gap: var(--sl); align-items: start; }
-  .screen.page > * { grid-column: 2; }
+  /* промежутки — отступами у полей, а не row-gap: иначе пустые строки сетки (фото тянется на 30 строк) дают лишнюю прокрутку */
+  .screen.page { max-width: 1100px; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); column-gap: 40px; row-gap: 0; align-items: start; padding-bottom: 60px; }
+  .screen.page > * { grid-column: 2; margin-bottom: var(--sl); }
   .screen.page > .head { grid-column: 1 / -1; }
   .screen.page > .field-photo { grid-column: 1; grid-row: 2 / span 30; position: sticky; top: var(--top); }
   .field-photo .ph { height: auto !important; aspect-ratio: 4 / 3; border-radius: var(--r-card); }

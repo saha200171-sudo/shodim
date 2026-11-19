@@ -1771,11 +1771,31 @@ function maybeCelebrate() {
   const R = roomCalc();
   const key = 'shodim-ach-' + S.space.id;
   let seen = null; try { seen = JSON.parse(localStorage.getItem(key) || 'null'); } catch { /* пусто */ }
-  if (!Array.isArray(seen)) { try { localStorage.setItem(key, JSON.stringify([...R.got.keys()])); } catch { /* нет места */ } return; }
+  // первый запуск на этом телефоне: старые достижения не поздравляем по одному — одно общее окно
+  if (!Array.isArray(seen)) {
+    try { localStorage.setItem(key, JSON.stringify([...R.got.keys()])); } catch { /* нет места */ }
+    if (R.got.size) welcomeModal(R);
+    return;
+  }
   const fresh = [...R.got.keys()].filter(id => !seen.includes(id));
   if (!fresh.length) return;
   seen.push(fresh[0]); try { localStorage.setItem(key, JSON.stringify(seen)); } catch { /* нет места */ }
   achModal(achById(fresh[0]), () => setTimeout(maybeCelebrate, 300));
+}
+function welcomeModal(R) {
+  const n = R.got.size, cups = R.bal.balance;
+  const list = ACHIEVEMENTS.filter(a => R.got.has(a.id)).sort((a, b) => R.got.get(a.id).localeCompare(R.got.get(b.id)));
+  const conf = Array.from({ length: 14 }, (_, i) => `<i style="left:${(i * 37) % 100}%;top:${(i * 53) % 90}%;background:var(--${['peach', 'sage', 'butter', 'sky', 'rose'][i % 5]});transform:rotate(${i * 47}deg)"></i>`).join('');
+  const { el, close } = openSheet(`<div class="confetti">${conf}</div>
+    <div class="col center" style="align-items:center;gap:6px;position:relative">
+      <span class="ach-ic big got" style="width:84px;height:84px">${icon('home', 36)}</span>
+      <span class="hand-m accent" style="margin-top:8px">добро пожаловать в комнату!</span>
+      <h2 class="h2">У нас уже ${n} ${plural(n, 'достижение', 'достижения', 'достижений')}</h2>
+      <span class="t-sub">${cups > 0 ? `и ${cups} ${cupsWord(cups)} — можно что-нибудь купить для комнаты` : 'за походы вместе — дальше будет ещё больше'}</span>
+      <div class="chips" style="justify-content:center;margin-top:8px">${list.slice(0, 6).map(a => `<span class="chip paper">${icon(a.icon, 16)}${esc(a.name)}</span>`).join('')}${n > 6 ? `<span class="chip paper">+ ещё ${n - 6}</span>` : ''}</div></div>
+    <div class="col" style="gap:4px;position:relative"><button class="btn" data-go2>Посмотреть комнату</button><button class="link-btn" data-later>Позже</button></div>`, { center: true });
+  el.querySelector('[data-go2]').onclick = () => { close(); go('#/room'); };
+  el.querySelector('[data-later]').onclick = close;
 }
 function achModal(a, after) {
   const it = a.item ? itemById(a.item) : null;
@@ -2198,7 +2218,7 @@ function seedDemo() {
       vmenu: () => { const v = S.visits.find(x => x.id === id); visitMenu(placeById(v.place_id), v); },
       addtravel: () => addPlace(), switch: () => switchSpaceSheet(), viewer: () => document.querySelector('[data-ph="1"]')?.click(), viewer2: () => { const v = [...document.querySelectorAll('[data-ph]')]; v[v.length - 2]?.click(); },
       pick: () => pickPoint({ lat: 53.9071, lng: 27.5529, title: 'Кофейня «Зерно»', query: new URLSearchParams(location.search).get('pq') || '', onDone: () => {} }),
-      ach: () => achModal(achById(id || 'regulars')), achd: () => achSheet(achById(id || 'gourmets')), slot: () => slotSheet(id || 'floorL'),
+      ach: () => achModal(achById(id || 'regulars')), welcome: () => welcomeModal(roomCalc()), achd: () => achSheet(achById(id || 'gourmets')), slot: () => slotSheet(id || 'floorL'),
       item: () => itemSheet(itemById(id || 'sofa')), film: () => storageSheet(),
       date: () => dateSheet({ value: '2026-09-14', sub: 'Кофейня «Зерно»', onPick: () => {} }), date2: () => dateSheet({ sub: 'Кофейня «Зерно»', onPick: () => {} }),
     }[what];

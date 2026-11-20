@@ -681,6 +681,7 @@ input[type=search]::-webkit-search-cancel-button { display: none; }
 .ticket.big.from-right { transform: translateX(60%) rotate(8deg); opacity: 0; transition: none; }
 .ticket.big.from-left { transform: translateX(-60%) rotate(-8deg); opacity: 0; transition: none; }
 .film-viewer .viewer-top { justify-content: space-between; }
+.film-viewer .viewer-stage { min-height: 0; align-self: stretch; margin: 0 auto; width: 100%; }
 .film-note { background: var(--note); border-radius: var(--r-mini); padding: 8px 12px; white-space: pre-line; }
 .rate-row { display: flex; align-items: center; gap: 10px; }
 .rate-row.card-ish { background: var(--paper); border-radius: var(--r-photo); padding: 10px 12px 10px 10px; }

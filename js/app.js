@@ -2099,6 +2099,7 @@ function filmViewer(list, start) {
         <span class="col" style="gap:8px">${rateRow(f, myId(), myName, 'peach', true)}${fr ? rateRow(f, friendId(), fr.display_name || 'Подруга', 'sage', false) : ''}</span>
         ${f.note ? `<span class="film-note hand-s">${esc(f.note)}</span>` : ''}</span></div>`;
     const t = stage.firstElementChild;
+    fitPoster(t);
     if (dir) { t.classList.add(dir > 0 ? 'from-right' : 'from-left'); requestAnimationFrame(() => requestAnimationFrame(() => t.classList.remove('from-right', 'from-left'))); }
     ov.querySelector('[data-count]').textContent = `${i + 1} из ${list.length}`;
     ov.querySelector('[data-prev]').disabled = i === 0; ov.querySelector('[data-next]').disabled = i === list.length - 1;
@@ -2108,6 +2109,15 @@ function filmViewer(list, start) {
       try { await rateFilm(f, v === cur ? 0 : v); draw(); } catch (err) { handleErr(err); }
     });
   };
+  // афиша — на всё свободное место по высоте (но не больше 2:3 и не меньше 200 px)
+  const fitPoster = t => {
+    const img = t.querySelector('.tk-poster > img, .tk-poster > .tk-noposter'); if (!img) return;
+    const free = stage.clientHeight - t.offsetHeight;
+    const maxH = Math.round(img.offsetWidth * 1.5);
+    img.style.height = Math.max(200, Math.min(maxH, img.offsetHeight + free - 8)) + 'px';
+  };
+  const onResize = () => { if (!closed && stage.firstElementChild) fitPoster(stage.firstElementChild); };
+  window.addEventListener('resize', onResize);
   const step = d => { const j = i + d; if (j < 0 || j >= list.length) return; i = j; draw(d); };
   ov.querySelector('[data-x]').onclick = close;
   ov.querySelector('[data-prev]').onclick = () => step(-1);

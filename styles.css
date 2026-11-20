@@ -672,7 +672,8 @@ input[type=search]::-webkit-search-cancel-button { display: none; }
 .ticket .tk-stub { display: flex; flex-direction: column; gap: 2px; padding: 2px 12px 12px; }
 .ticket.big { width: min(100%, 360px); border-radius: 22px; box-shadow: 0 18px 40px rgba(30, 20, 15, .35); transition: transform .3s, opacity .3s; }
 .ticket.big .tk-poster { padding: 12px 12px 6px; }
-.ticket.big .tk-poster > img, .ticket.big .tk-noposter { aspect-ratio: auto; height: min(44vh, 360px); }
+.ticket.big .tk-poster > img, .ticket.big .tk-noposter { aspect-ratio: auto; height: clamp(240px, calc(100vh - 470px), 504px); } /* сколько есть по высоте, но не больше 2:3 */
+@supports (height: 100dvh) { .ticket.big .tk-poster > img, .ticket.big .tk-noposter { height: clamp(240px, calc(100dvh - 470px), 504px); } }
 .ticket.big .tk-tear { margin: 0 22px; height: 22px; }
 .ticket.big .tk-tear::before, .ticket.big .tk-tear::after { width: 22px; height: 22px; background: #8e837d; }
 .ticket.big .tk-tear::before { left: -33px; } .ticket.big .tk-tear::after { right: -33px; }

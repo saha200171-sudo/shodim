@@ -2048,6 +2048,8 @@ function renderFilms(q) {
   const months = [];
   for (const f of list) { const k = f.watched_on.slice(0, 7); let m = months.find(x => x.k === k); if (!m) months.push(m = { k, items: [] }); m.items.push(f); }
   let n = 0;
+  // пунктирный «билет» «+ Добавить фильм» — в конце самого свежего месяца (как «+ Добавить место» в группах)
+  const addFilmTile = `<button class="ticket add-ticket" data-act="new-film"><span class="tk-poster"><span class="tk-noposter">${icon('plus', 28)}</span></span><span class="tk-tear"></span><span class="tk-stub"><span class="t-cards">Добавить фильм</span></span></button>`;
   app.innerHTML = `<div class="screen">
     <div class="col"><span class="hand-m accent">наше кино</span><h1 class="h1">Фильмы</h1></div>
     ${!S.hasFilms && !S.demo ? `<div class="kind-hint" style="cursor:default">${icon('lock', 18)}<span>Чтобы фильмы сохранялись, нужно один раз запустить <b>004_films.sql</b> в Supabase (SQL Editor).</span></div>` : ''}
@@ -2056,8 +2058,8 @@ function renderFilms(q) {
         <div class="stack-xs"><h2 class="h2">Здесь будут наши фильмы</h2><p class="t-body muted" style="margin:0">Отмечайте фильмы, которые посмотрели вместе — в кино или дома. С афишей и оценками каждой.</p></div>
         <button class="btn" data-act="new-film">Добавить фильм</button></div>`
       : !list.length ? `<p class="t-sub center" style="margin:24px 0">Здесь пока нет фильмов</p>`
-      : months.map(m => `<div class="month"><div class="mh"><span class="hand-l">${fmtMonth(m.k)}</span><span class="t-sub">${m.items.length} ${plural(m.items.length, 'фильм', 'фильма', 'фильмов')}</span></div>
-          <div class="tickets">${m.items.map(f => ticketHTML(f, n++)).join('')}</div></div>`).join('')}
+      : months.map((m, mi) => `<div class="month"><div class="mh"><span class="hand-l">${fmtMonth(m.k)}</span><span class="t-sub">${m.items.length} ${plural(m.items.length, 'фильм', 'фильма', 'фильмов')}</span></div>
+          <div class="tickets">${m.items.map(f => ticketHTML(f, n++)).join('')}${mi === 0 && w === 'all' ? addFilmTile : ''}</div></div>`).join('')}
   </div>${navHTML('f')}`;
   bindCommon();
   on('[data-act=new-film]', 'click', () => filmSheet(null));

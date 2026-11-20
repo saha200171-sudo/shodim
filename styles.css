@@ -723,3 +723,15 @@ input[type=search]::-webkit-search-cancel-button { display: none; }
 .ticket.big .tk-tear { margin: 0; height: 22px; padding: 0 22px;
   -webkit-mask: radial-gradient(circle at 0 50%, #0000 11px, #000 11.5px) 0 0 / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, #0000 11px, #000 11.5px) 100% 0 / 51% 100% no-repeat;
   mask: radial-gradient(circle at 0 50%, #0000 11px, #000 11.5px) 0 0 / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, #0000 11px, #000 11.5px) 100% 0 / 51% 100% no-repeat; }
+
+/* «+ Добавить фильм» — пунктирный билет в конце ряда, с пунктирными вырезами */
+.ticket.add-ticket { filter: none; border: 1.5px dashed var(--dash); border-radius: 16px; }
+.add-ticket .tk-poster, .add-ticket .tk-stub { background: none; }
+.add-ticket .tk-noposter { display: grid; place-items: center; background: none; color: var(--accent); }
+.add-ticket:hover .tk-noposter { background: var(--card); }
+.add-ticket .t-cards { color: var(--muted); }
+.ticket.add-ticket .tk-tear { background: linear-gradient(90deg, var(--dash) 50%, transparent 0) 0 50% / 8px 1.5px repeat-x content-box content-box; -webkit-mask: none; mask: none; }
+.ticket.add-ticket .tk-tear::before, .ticket.add-ticket .tk-tear::after { display: block; content: ''; position: absolute; top: 0; width: 16px; height: 16px; border-radius: 50%; background: var(--paper); border: 1.5px dashed var(--dash); box-sizing: border-box; }
+.ticket.add-ticket .tk-tear { position: relative; }
+.ticket.add-ticket .tk-tear::before { left: -9.5px; clip-path: inset(-2px -2px -2px calc(50% - 1.5px)); }
+.ticket.add-ticket .tk-tear::after { right: -9.5px; clip-path: inset(-2px calc(50% - 1.5px) -2px -2px); }

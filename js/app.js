@@ -2067,7 +2067,7 @@ function renderFilms(q) {
         <div class="stack-xs"><h2 class="h2">Здесь будут наши фильмы</h2><p class="t-body muted" style="margin:0">Отмечайте фильмы, которые посмотрели вместе — в кино или дома. С афишей и оценками каждой.</p></div>
         <button class="btn" data-act="new-film">Добавить фильм</button></div>`
       : !list.length ? `<p class="t-sub center" style="margin:24px 0">Здесь пока нет фильмов</p>`
-      : `<div class="tickets">${list.map(f => ticketHTML(f, n++)).join('')}</div>`}
+      : `<div class="tickets">${list.map(f => ticketHTML(f, n++)).join('')}${w === 'all' ? `<button class="ticket add-ticket" data-act="new-film"><span class="tk-poster"><span class="tk-noposter">${icon('plus', 28)}</span></span><span class="tk-tear"></span><span class="tk-stub"><span class="t-cards">Добавить фильм</span></span></button>` : ''}</div>`}
   </div>${navHTML('f')}`;
   bindCommon();
   on('[data-act=new-film]', 'click', () => filmSheet(null));

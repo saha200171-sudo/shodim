@@ -688,6 +688,7 @@ function bindGroupHead(g) {
 // =========================================================
 // Карта: Leaflet + OpenStreetMap (бесплатно, без ключа), поиск адресов — Nominatim
 // =========================================================
+// Кружки с цифрой — только на виде страны/континента; с масштаба города (zoom ≥ 10) каждое место отдельной булавкой
 const LEAFLET = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/';
 const MCLUSTER = 'https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/';
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -912,7 +913,7 @@ function renderGroupMap(g, q) {
   loadLeaflet().then(() => {
     const el = $('[data-map]'); if (!el) return; // уже ушли с экрана
     map = newMap(el);
-    cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 44, iconCreateFunction: c => L.divIcon({ className: 'cluster', html: `<span>${c.getChildCount()}</span>`, iconSize: [44, 44] }) });
+    cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 44, disableClusteringAtZoom: 10, iconCreateFunction: c => L.divIcon({ className: 'cluster', html: `<span>${c.getChildCount()}</span>`, iconSize: [44, 44] }) });
     map.addLayer(cluster);
     map.on('click', () => { if (sel) { const old = sel; sel = null; refreshIcon(old); drawBottom(); } });
     drawPins(true);
@@ -1008,7 +1009,7 @@ function renderAllMap(q) {
   loadLeaflet().then(() => {
     const el = $('[data-map]'); if (!el) return;
     map = newMap(el);
-    cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 44, iconCreateFunction: c => L.divIcon({ className: 'cluster', html: `<span>${c.getChildCount()}</span>`, iconSize: [44, 44] }) });
+    cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 44, disableClusteringAtZoom: 10, iconCreateFunction: c => L.divIcon({ className: 'cluster', html: `<span>${c.getChildCount()}</span>`, iconSize: [44, 44] }) });
     map.addLayer(cluster);
     map.on('click', () => { if (sel) { const old = sel; sel = null; refreshIcon(old); drawBottom(); } });
     map.on('moveend', () => { if (!sel) drawBottom(); });

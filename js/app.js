@@ -1,7 +1,7 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm';
 import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
 import { KINDS, kindById, kindHints, ITEMS, itemById, SHOP, SHOP_TOTAL, SLOT_NAMES, CATS, ACHIEVEMENTS, achById,
-  computeAchievements, cupsBalance, ownedSet, arrangement, windowState } from './room.js';
+  computeAchievements, cupsBalance, ownedSet, arrangement, windowState, filmInCinema } from './room.js';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
@@ -23,8 +23,9 @@ const S = {
   ctxGroup: null,
   dirty: false,
   room: { owned: [], placed: {} }, hasRoom: false, hasKinds: false, // комната (003_room.sql)
+  films: [], hasFilms: false, // фильмы (004_films.sql)
 };
-const KEY = { groups: 'groups', places: 'places', visits: 'visits', visit_photos: 'photos' };
+const KEY = { groups: 'groups', places: 'places', visits: 'visits', visit_photos: 'photos', films: 'films' };
 
 // =========================================================
 // Утилиты
@@ -206,6 +207,7 @@ async function signUrls() {
   S.groups.forEach(g => g.cover_path && need.add(g.cover_path));
   S.places.forEach(p => p.cover_path && need.add(p.cover_path));
   S.photos.forEach(f => need.add(f.path));
+  S.films.forEach(f => f.poster_path && need.add(f.poster_path));
   const paths = [...need].filter(p => !S.urls.has(p));
   for (let i = 0; i < paths.length; i += 100) {
     const { data, error } = await sb.storage.from('photos').createSignedUrls(paths.slice(i, i + 100), 60 * 60 * 24 * 7);
@@ -235,7 +237,15 @@ async function loadAll() {
   ]);
   for (const r of res) if (r.error) throw r.error;
   [S.members, S.groups, S.places, S.visits, S.photos] = res.map(r => r.data);
-  await Promise.all([signUrls(), loadRoom()]);
+  await Promise.all([loadRoom(), loadFilms()]);
+  await signUrls();
+}
+// Фильмы появляются после 004_films.sql — до этого вкладка показывает подсказку
+async function loadFilms() {
+  if (S.demo || !S.space) return;
+  const r = await sb.from('films').select('*').eq('space_id', S.space.id).order('watched_on', { ascending: false });
+  if (r.error) { S.hasFilms = false; S.films = []; console.warn('films:', r.error.message); }
+  else { S.hasFilms = true; S.films = r.data; }
 }
 // Комната и тип места появляются после 003_room.sql — до этого приложение просто работает без них
 async function loadRoom() {
@@ -324,7 +334,7 @@ function subscribe() {
   if (S.demo || !S.space) return;
   if (channel) sb.removeChannel(channel);
   channel = sb.channel('space-' + S.space.id);
-  for (const t of ['groups', 'places', 'visits', 'visit_photos', ...(S.hasRoom ? ['room'] : [])]) {
+  for (const t of ['groups', 'places', 'visits', 'visit_photos', ...(S.hasRoom ? ['room'] : []), ...(S.hasFilms ? ['films'] : [])]) {
     channel.on('postgres_changes', { event: '*', schema: 'public', table: t, filter: `space_id=eq.${S.space.id}` }, scheduleRefresh);
   }
   channel.subscribe();
@@ -393,7 +403,7 @@ function bindCommon(root = app) {
     if (el.dataset.lp === '1') { delete el.dataset.lp; e.preventDefault(); return; }
     go(el.dataset.go);
   }, root);
-  on('[data-act=add]', 'click', () => addPlace(), root);
+  on('[data-act=add]', 'click', () => addAny(), root);
 }
 function longPress(el, fn) {
   let t = null, x = 0, y = 0;
@@ -430,7 +440,7 @@ const navHTML = (active, fade = true) => `${fade ? '<div class="fade"></div>' : 
   <button class="nav-brand" data-go="#/"><img src="icons/icon-192.png" alt=""><span>Сходим?</span></button>
   <button class="item ${active === 'p' ? 'on' : ''}" data-go="#/">${icon('places', 24)}Места</button>
   <button class="item ${active === 'm' ? 'on' : ''}" data-go="#/map">${icon('map', 24)}Карта</button>
-  <button class="plus" data-act="add" aria-label="Добавить место">${icon('plus', 26)}<span class="plus-label">Добавить место</span></button>
+  <button class="plus" data-act="add" aria-label="Добавить место">${icon('plus', 26)}<span class="plus-label">Добавить</span></button>
   <button class="item ${active === 'r' ? 'on' : ''}" data-go="#/room">${icon('home', 24)}Комната</button>
   <button class="item ${active === 'a' ? 'on' : ''}" data-go="#/album">${icon('album', 24)}Альбом</button></nav>`;
 
@@ -1377,6 +1387,7 @@ function albumCards(visits) {
   });
 }
 function renderAlbum(q) {
+  if (q.get('tab') === 'films') return renderFilms(q);
   S.ctxGroup = null;
   const f = q.get('f') || 'all';
   const inFilter = v => {
@@ -1395,6 +1406,7 @@ function renderAlbum(q) {
   for (const m of months) { m.cards = albumCards(m.items).map(c => { c.gi = list.length; c.tilt = TILT[list.length % 4]; list.push(c); return c; }); }
   app.innerHTML = `<div class="screen">
     <div class="col"><span class="hand-m accent">наши воспоминания</span><h1 class="h1">Альбом</h1></div>
+    ${albumTabs(false)}
     ${all.length ? `<div class="chips">${chips.map(([k, n]) => `<button class="chip ${f === k ? 'active' : ''}" data-go="#/album${k === 'all' ? '' : '?f=' + k}">${esc(n)}</button>`).join('')}</div>` : ''}
     ${!all.length ? `<div class="empty">
         <div class="polaroid" style="width:160px;transform:rotate(-4deg)"><span class="tape" style="background:var(--butter)"></span>
@@ -1579,6 +1591,12 @@ function itemBox(it, shown) {
 // mode: 'room' — как сейчас; 'dream' — все вещи, которых нет, полупрозрачные с замочком
 // в демо можно посмотреть другое время: ?demo&t=night&s=winter
 const wsNow = () => { const q = new URLSearchParams(location.search), w = windowState(); return S.demo ? { season: q.get('s') || w.season, time: q.get('t') || w.time } : w; };
+// на экране проектора — афиша последнего фильма (если проектор есть)
+function posterOnScreen(on) {
+  if (!on) return '';
+  const f = [...S.films].filter(x => x.poster_path && url(x.poster_path)).sort((a, b) => b.watched_on.localeCompare(a.watched_on))[0];
+  return f ? `<img class="l scr-poster" src="${esc(url(f.poster_path))}" alt="" style="${boxStyle([398, 80, 136, 74])};z-index:24">` : '';
+}
 function sceneHTML({ have, placed, dream = false, ws = wsNow(), fresh = null }) {
   let shown = arrangement(have, placed);
   let ghosts = [];
@@ -1615,7 +1633,7 @@ function sceneHTML({ have, placed, dream = false, ws = wsNow(), fresh = null }) 
     <img class="l win" src="room/win-${ws.season}-${time}.svg" alt="" style="${boxStyle(WIN_BOX)};z-index:10">
     <img class="l win" src="room/winf-${ws.season}-${time}.svg" alt="" style="${boxStyle(WIN_BOX)};z-index:12">
     <img class="l" src="room/screen.svg" alt="" style="${boxStyle(SCREEN_BOX)};z-index:22">
-    ${all.map(layer).join('')}${glows}${locks}
+    ${all.map(layer).join('')}${posterOnScreen(lit('film') && !dream)}${glows}${locks}
   </div>`;
 }
 // ночной и вечерний свет — фильтры для слоёв (кроме окна, у него свои картинки)
@@ -1683,15 +1701,20 @@ function bindScene(R) {
   hot.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => slotSheet(b.dataset.slot));
 }
 // нажали на экран — всплывает «Наша плёнка», нажали ещё раз — открывается
+// нажали на экран — меню: «Наши фильмы» и «Наша плёнка»
 function screenPill(hot) {
-  let pill = hot.querySelector('.film-pill');
-  if (pill) { pill.remove(); return storageSheet(); }
-  pill = document.createElement('button');
-  pill.className = 'film-pill'; pill.innerHTML = `${icon('film', 16)}Наша плёнка`;
-  pill.style.cssText = `left:${pct(466, 720)};top:${pct(117, 330)}`;
-  pill.onclick = e => { e.stopPropagation(); pill.remove(); storageSheet(); };
-  hot.appendChild(pill);
-  setTimeout(() => pill.remove(), 4000);
+  let menu = hot.querySelector('.screen-menu');
+  if (menu) { menu.remove(); return; }
+  menu = document.createElement('div');
+  menu.className = 'screen-menu';
+  const n = S.films.length;
+  menu.innerHTML = `<button data-m="films"><span class="bub" style="background:var(--sky)">${icon('kind-kino', 18)}</span><span class="col"><span class="t-bold">Наши фильмы</span><span class="t-sub">${n ? `${n} ${plural(n, 'фильм', 'фильма', 'фильмов')}` : 'пока пусто'}</span></span></button>
+    <button data-m="film"><span class="bub" style="background:var(--butter)">${icon('film', 18)}</span><span class="col"><span class="t-bold">Наша плёнка</span><span class="t-sub">место для фото</span></span></button>`;
+  menu.style.cssText = `left:${pct(466, 720)};top:${pct(150, 330)}`;
+  menu.querySelector('[data-m=films]').onclick = e => { e.stopPropagation(); go('#/album?tab=films'); };
+  menu.querySelector('[data-m=film]').onclick = e => { e.stopPropagation(); menu.remove(); storageSheet(); };
+  hot.appendChild(menu);
+  setTimeout(() => menu.remove(), 6000);
 }
 
 // ----- 23 Выбор вещи для места
@@ -1860,7 +1883,7 @@ function achSheet(a) {
       <span class="t-sub">${esc(a.text)} · ${a.cups ? `+${a.cups} ${cupsWord(a.cups)}` : `трофей «${esc(itemById(a.item).name)}»`}</span></div></div>
     <div class="stack-xs"><div class="row between"><span class="t-bold">${v} из ${a.goal}</span><span class="t-bold accent">${g ? `получено ${fmtDayMonth(R.got.get(a.id))}` : `ещё ${left}`}</span></div>
       <span class="pbar big"><span style="width:${(v / a.goal * 100).toFixed(1)}%"></span></span></div>
-    ${k ? `<div class="card info" style="background:var(--paper)"><div class="row wrap" style="gap:8px"><span class="t-body">${a.visitsKind ? 'Считаются походы в места с отметкой' : 'Считаются разные места с отметкой'}</span><span class="chip kind on">${icon('kind-' + k.id, 18)}${k.name}</span></div>
+    ${k ? `<div class="card info" style="background:var(--paper)"><div class="row wrap" style="gap:8px"><span class="t-body">${a.visitsKind ? 'Считаются фильмы в кинотеатре (Альбом → Фильмы) и визиты в места с отметкой' : 'Считаются разные места с отметкой'}</span><span class="chip kind on">${icon('kind-' + k.id, 18)}${k.name}</span></div>
       <span class="t-sub">${a.visitsKind ? 'Каждый визит засчитывается отдельно.' : 'Повторный визит в то же место не добавляет.'} Отметка ставится в карточке места: «Что это за место?».</span></div>
       ${counted.length ? `<div class="stack-xs"><span class="t-bold">Уже засчитаны</span><div class="chips">${counted.slice(0, 8).map(p => `<span class="chip paper">${esc(shortName(p.name))}</span>`).join('')}${counted.length > 8 ? `<span class="chip paper">+ ещё ${counted.length - 8}</span>` : ''}</div></div>` : ''}` : ''}`);
 }
@@ -1991,6 +2014,219 @@ async function checkStorageWarning() {
     el.querySelector('[data-see]').onclick = () => { later(); close(); storageSheet(); };
     el.querySelector('[data-later]').onclick = () => { later(); close(); };
   } catch (e) { console.warn(e); }
+}
+
+// =========================================================
+// Фильмы (вкладка в альбоме): билеты, большой билет с оценками, «Новый фильм»
+// =========================================================
+const fmtDM = s => `${s.slice(8, 10)}.${s.slice(5, 7)}`;
+const myId = () => S.user?.id || 'me';
+const friend = () => S.members.find(m => (m.user_id || 'friend') !== myId()) || null;
+const friendId = () => friend()?.user_id || 'friend';
+const cinemas = () => S.places.filter(p => (p.kinds || []).includes('kino')).sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+const filmWhere = f => f.at_home ? 'дома' : f.place_id ? `«${shortName(placeById(f.place_id)?.name || 'кинотеатр')}»` : (f.cinema || '');
+const posterHTML = (f, cls = '') => url(f.poster_path)
+  ? `<img class="${cls}" src="${esc(url(f.poster_path))}" alt="" loading="lazy">`
+  : `<div class="tk-noposter ${cls}">${art(hashKey(f.id))}<span>${esc(f.title)}</span></div>`;
+const starsHTML = (n, size = 16) => Array.from({ length: 5 }, (_, i) => `<svg class="ic star ${i < n ? 'on' : ''}" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z"/></svg>`).join('');
+const needFilmsSQL = () => toast('Нужно один раз запустить 004_films.sql в Supabase — тогда фильмы будут сохраняться');
+
+function albumTabs(films) {
+  return `<div class="segmented album-tabs"><button class="${films ? '' : 'on'}" data-go="#/album">Места</button><button class="${films ? 'on' : ''}" data-go="#/album?tab=films">Фильмы${S.films.length ? ' · ' + S.films.length : ''}</button></div>`;
+}
+function ticketHTML(f, i) {
+  return `<button class="ticket" data-film="${f.id}" style="--tilt:${[-1.2, 1.2, -0.8, 1.5][i % 4]}deg">
+    <span class="tk-poster">${posterHTML(f)}</span><span class="tk-tear"></span>
+    <span class="tk-stub"><span class="t-cards">${esc(f.title)}</span><span class="t-sub">${esc([fmtDM(f.watched_on), filmWhere(f)].filter(Boolean).join(' · '))}</span></span></button>`;
+}
+function renderFilms(q) {
+  S.ctxGroup = null;
+  const w = q.get('w') || 'all';
+  const all = [...S.films].sort((a, b) => b.watched_on.localeCompare(a.watched_on) || String(b.created_at).localeCompare(String(a.created_at)));
+  const list = all.filter(f => w === 'all' || (w === 'cinema' ? filmInCinema(f) : !filmInCinema(f)));
+  const months = [];
+  for (const f of list) { const k = f.watched_on.slice(0, 7); let m = months.find(x => x.k === k); if (!m) months.push(m = { k, items: [] }); m.items.push(f); }
+  let n = 0;
+  app.innerHTML = `<div class="screen">
+    <div class="col"><span class="hand-m accent">наши воспоминания</span><h1 class="h1">Альбом</h1></div>
+    ${albumTabs(true)}
+    ${!S.hasFilms && !S.demo ? `<div class="kind-hint" style="cursor:default">${icon('lock', 18)}<span>Чтобы фильмы сохранялись, нужно один раз запустить <b>004_films.sql</b> в Supabase (SQL Editor).</span></div>` : ''}
+    ${all.length ? `<div class="chips">${[['all', 'Все'], ['cinema', 'В кино'], ['home', 'Дома']].map(([k, t]) => `<button class="chip ${w === k ? 'active' : ''}" data-go="#/album?tab=films${k === 'all' ? '' : '&w=' + k}">${t}</button>`).join('')}</div>` : ''}
+    ${!all.length ? `<div class="empty"><div class="ticket" style="width:150px;--tilt:-3deg;pointer-events:none"><span class="tk-poster"><span class="tk-noposter" style="background:var(--paper);border:1.5px dashed var(--dash)"></span></span><span class="tk-tear"></span><span class="tk-stub"><span class="hand-s muted">скоро здесь…</span></span></div>
+        <div class="stack-xs"><h2 class="h2">Здесь будут наши фильмы</h2><p class="t-body muted" style="margin:0">Отмечайте фильмы, которые посмотрели вместе — в кино или дома. С афишей и оценками каждой.</p></div>
+        <button class="btn" data-act="new-film">Добавить фильм</button></div>`
+      : !list.length ? `<p class="t-sub center" style="margin:24px 0">Здесь пока нет фильмов</p>`
+      : months.map(m => `<div class="month"><div class="mh"><span class="hand-l">${fmtMonth(m.k)}</span><span class="t-sub">${m.items.length} ${plural(m.items.length, 'фильм', 'фильма', 'фильмов')}</span></div>
+          <div class="tickets">${m.items.map(f => ticketHTML(f, n++)).join('')}</div></div>`).join('')}
+  </div>${navHTML('a')}`;
+  bindCommon();
+  on('[data-act=new-film]', 'click', () => filmSheet(null));
+  on('[data-film]', 'click', (e, el) => filmViewer(list, list.findIndex(f => f.id === el.dataset.film)));
+}
+
+async function rateFilm(f, stars) {
+  const me = myId();
+  if (S.demo || !S.hasFilms) { f.ratings = { ...(f.ratings || {}) }; if (stars) f.ratings[me] = stars; else delete f.ratings[me]; return; }
+  const { data, error } = await sb.rpc('film_rate', { p_film: f.id, p_stars: stars || 0 });
+  if (error) throw error;
+  Object.assign(f, data);
+}
+// ----- 43 Большой билет: афиша, дата, кинотеатр, обе оценки (свою можно поставить прямо здесь), пара слов
+function filmViewer(list, start) {
+  if (!list.length) return;
+  let i = Math.max(0, start);
+  const ov = document.createElement('div');
+  ov.className = 'overlay viewer film-viewer';
+  ov.innerHTML = `<div class="viewer-top"><button class="round shadow" data-x aria-label="Закрыть">${icon('close')}</button><button class="round shadow" data-more aria-label="Ещё">${icon('more')}</button></div>
+    <div class="viewer-stage" data-stage></div>
+    <div class="viewer-bottom"><button class="round shadow" data-prev aria-label="Предыдущий">${icon('back')}</button><span class="chip viewer-count" data-count></span><button class="round shadow" data-next aria-label="Следующий">${icon('right')}</button></div>`;
+  document.body.appendChild(ov);
+  const stage = ov.querySelector('[data-stage]');
+  history.pushState({ viewer: 1 }, '');
+  let closed = false;
+  const finish = () => { if (closed) return; closed = true; window.removeEventListener('popstate', finish); document.removeEventListener('keydown', onKey); ov.remove(); setTimeout(tryRefresh, 50); };
+  const close = () => { if (history.state?.viewer) history.back(); else finish(); };
+  window.addEventListener('popstate', finish);
+  const rateRow = (f, who, label, color, mine) => {
+    const n = (f.ratings || {})[who] || 0;
+    return `<div class="rate-row"><span class="avatar sm" style="background:var(--${color})">${esc(initial(label))}</span><span class="t-body grow">${mine ? 'Моя оценка' : esc(label)}</span>
+      ${mine ? `<span class="stars mine" data-rate>${Array.from({ length: 5 }, (_, k) => `<button data-s="${k + 1}" aria-label="${k + 1}">${starsHTML(k < n ? 1 : 0, 22).split('</svg>')[0]}</svg></button>`).join('')}</span>`
+        : n ? `<span class="stars">${starsHTML(n, 20)}</span>` : `<span class="t-sub">ещё не оценила</span>`}</div>`;
+  };
+  const draw = (dir = 0) => {
+    const f = list[i], fr = friend(), myName = S.members.find(m => (m.user_id || 'me') === myId())?.display_name || 'Я';
+    stage.innerHTML = `<div class="ticket big" style="--tilt:0deg">
+      <span class="tk-poster">${posterHTML(f)}</span><span class="tk-tear"></span>
+      <span class="tk-stub"><span class="h2">${esc(f.title)}</span>
+        <span class="row wrap" style="gap:14px"><span class="row t-sub" style="gap:6px"><span class="accent">${icon('cal', 18)}</span>${fmtDate(f.watched_on)}</span>${filmWhere(f) ? `<span class="row t-sub" style="gap:6px"><span class="accent">${icon(f.at_home ? 'home' : 'kind-kino', 18)}</span>${esc(filmWhere(f))}</span>` : ''}</span>
+        <span class="col" style="gap:8px">${rateRow(f, myId(), myName, 'peach', true)}${fr ? rateRow(f, friendId(), fr.display_name || 'Подруга', 'sage', false) : ''}</span>
+        ${f.note ? `<span class="film-note hand-s">${esc(f.note)}</span>` : ''}</span></div>`;
+    const t = stage.firstElementChild;
+    if (dir) { t.classList.add(dir > 0 ? 'from-right' : 'from-left'); requestAnimationFrame(() => requestAnimationFrame(() => t.classList.remove('from-right', 'from-left'))); }
+    ov.querySelector('[data-count]').textContent = `${i + 1} из ${list.length}`;
+    ov.querySelector('[data-prev]').disabled = i === 0; ov.querySelector('[data-next]').disabled = i === list.length - 1;
+    stage.querySelectorAll('[data-rate] [data-s]').forEach(b => b.onclick = async e => {
+      e.stopPropagation();
+      const cur = (f.ratings || {})[myId()] || 0, v = +b.dataset.s;
+      try { await rateFilm(f, v === cur ? 0 : v); draw(); } catch (err) { handleErr(err); }
+    });
+  };
+  const step = d => { const j = i + d; if (j < 0 || j >= list.length) return; i = j; draw(d); };
+  ov.querySelector('[data-x]').onclick = close;
+  ov.querySelector('[data-prev]').onclick = () => step(-1);
+  ov.querySelector('[data-next]').onclick = () => step(1);
+  ov.querySelector('[data-more]').onclick = () => {
+    const f = list[i];
+    const { el, close: c2 } = openSheet(`<div class="stack-xs"><h2 class="h2">${esc(f.title)}</h2><span class="t-sub">${fmtDate(f.watched_on)}</span></div>
+      ${actionsHTML([['edit', 'pencil', 'Изменить'], ['del', 'trash', 'Удалить фильм', true]])}`);
+    el.querySelector('[data-a=edit]').onclick = () => { c2(); finish(); history.replaceState(null, ''); filmSheet(f); };
+    el.querySelector('[data-a=del]').onclick = async () => {
+      c2();
+      if (!(await confirmDialog(`Удалить «${f.title}»?`, 'Вместе с афишей и оценками. Вернуть не получится.'))) return;
+      try { await deleteFilm(f); finish(); history.replaceState(null, ''); toast('Фильм удалён'); render(); } catch (err) { handleErr(err); }
+    };
+  };
+  ov.addEventListener('click', e => { if (e.target === ov || e.target === stage) close(); });
+  const onKey = e => { if (e.key === 'ArrowRight') step(1); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  let x0 = null, dx = 0;
+  stage.addEventListener('pointerdown', e => { if (e.target.closest('[data-rate]')) return; x0 = e.clientX; dx = 0; });
+  stage.addEventListener('pointermove', e => { if (x0 != null) dx = e.clientX - x0; });
+  const end = () => { if (x0 == null) return; x0 = null; if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1); };
+  stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
+  draw(0);
+}
+async function deleteFilm(f) {
+  if (S.demo || !S.hasFilms) { S.films = S.films.filter(x => x.id !== f.id); return; }
+  await del('films', f.id);
+  await removeFiles([f.poster_path]);
+}
+
+// ----- 42 Новый фильм / изменить
+function filmSheet(f) {
+  if (!S.hasFilms && !S.demo) return needFilmsSQL();
+  const cs = cinemas();
+  const last = [...S.films].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0];
+  const F = {
+    title: f?.title || '', date: f?.watched_on || todayISO(), note: f?.note || '',
+    where: f ? (f.at_home ? 'home' : f.place_id ? 'p:' + f.place_id : f.cinema ? 'other' : 'home') : (last ? (last.at_home ? 'home' : last.place_id && cs.some(c => c.id === last.place_id) ? 'p:' + last.place_id : cs[0] ? 'p:' + cs[0].id : 'home') : (cs[0] ? 'p:' + cs[0].id : 'home')),
+    other: f?.cinema || '', stars: f ? (f.ratings || {})[myId()] || 0 : 0,
+    file: null, fileUrl: null, removed: false,
+  };
+  const { el, close } = openSheet('<div data-body class="stack-m" style="gap:20px"></div>');
+  const body = el.querySelector('[data-body]');
+  const posterSrc = () => F.fileUrl || (!F.removed && f?.poster_path ? url(f.poster_path) : null);
+  const draw = () => {
+    const fr = friend(), frStars = f ? (f.ratings || {})[friendId()] || 0 : 0;
+    body.innerHTML = `<div class="stack-xs"><h2 class="h2">${f ? 'Изменить фильм' : 'Новый фильм'}</h2><span class="t-sub">появится в альбоме на вкладке «Фильмы»</span></div>
+      <div class="film-top">
+        <label class="poster-pick">${posterSrc() ? `<img src="${esc(posterSrc())}" alt=""><button type="button" class="x" data-rmp aria-label="Убрать">${icon('close', 16)}</button>` : `${icon('camera', 26)}<span>афиша</span>`}<input type="file" accept="image/*" hidden data-file></label>
+        <div class="col grow" style="gap:8px"><label class="label" for="ft">Название</label><input id="ft" class="input" data-title placeholder="Название фильма" value="${esc(F.title)}">
+          <span class="t-sub">Афишу можно сфотографировать или взять скриншот — или добавить позже</span></div></div>
+      <div class="field"><span class="label">Когда</span>
+        <button class="input" data-pick style="text-align:left"><span style="color:var(--accent)">${icon('cal')}</span><span class="t-bold grow">${fmtDate(F.date)}</span>${icon('down', 20)}</button>
+        <div class="chips">${[[0, 'сегодня'], [-1, 'вчера'], [-2, 'позавчера']].map(([d, t]) => `<button class="chip ${F.date === shiftDays(d) ? 'active' : 'paper'}" data-day="${d}">${t}</button>`).join('')}</div></div>
+      <div class="field"><span class="label">Где смотрели</span>
+        <div class="chips">${cs.map(c => `<button class="chip ${F.where === 'p:' + c.id ? 'active' : 'paper'}" data-w="p:${c.id}">«${esc(shortName(c.name))}»</button>`).join('')}
+          <button class="chip ${F.where === 'home' ? 'active' : 'paper'}" data-w="home">дома</button>
+          <button class="chip ${F.where === 'other' ? 'active' : 'paper'}" data-w="other">${F.where === 'other' && F.other ? esc(F.other) : '+ другой кинотеатр'}</button></div>
+        ${F.where === 'other' ? `<input class="input" data-other placeholder="Название кинотеатра" value="${esc(F.other)}">` : ''}
+        <span class="t-sub">${cs.length ? 'Кинотеатры — это ваши места с отметкой «Кино».' : 'Отметьте кинотеатр в местах как «Кино» — и он появится здесь.'} Поход в кино засчитается в «Киноманов».</span></div>
+      <div class="field"><span class="label">Оценки</span>
+        <div class="rate-row card-ish"><span class="avatar sm" style="background:var(--peach)">${esc(initial(S.members.find(m => (m.user_id || 'me') === myId())?.display_name || 'Я'))}</span><span class="t-bold grow">Моя оценка</span>
+          <span class="stars mine" data-my>${Array.from({ length: 5 }, (_, k) => `<button type="button" data-s="${k + 1}" aria-label="${k + 1}">${starsHTML(k < F.stars ? 1 : 0, 24).split('</svg>')[0]}</svg></button>`).join('')}</span></div>
+        ${fr ? `<div class="rate-row card-ish"><span class="avatar sm" style="background:var(--sage)">${esc(initial(fr.display_name))}</span><span class="col grow"><span class="t-bold">${esc(fr.display_name || 'Подруга')}</span><span class="t-sub">${frStars ? 'её оценка' : 'поставит со своего телефона'}</span></span>
+          <span class="stars">${starsHTML(frStars, 20)}</span></div>` : ''}</div>
+      <div class="field"><label>Пара слов</label><textarea class="input" data-note rows="3" placeholder="Как вам фильм?">${esc(F.note)}</textarea></div>
+      <div class="col" style="gap:4px"><button class="btn" data-save>${f ? 'Сохранить' : 'Сохранить в альбом'}</button>
+      ${f ? `<button class="link-btn danger" data-delete style="padding:8px">Удалить фильм</button>` : ''}</div>`;
+    body.querySelector('[data-title]').addEventListener('input', e => { F.title = e.target.value; });
+    body.querySelector('[data-note]').addEventListener('input', e => { F.note = e.target.value; });
+    body.querySelector('[data-other]')?.addEventListener('input', e => { F.other = e.target.value; });
+    body.querySelector('[data-file]').addEventListener('change', e => { const fl = e.target.files[0]; if (!fl) return; F.file = fl; F.fileUrl = URL.createObjectURL(fl); draw(); });
+    body.querySelector('[data-rmp]')?.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); F.file = null; F.fileUrl = null; F.removed = true; draw(); });
+    body.querySelector('[data-pick]').onclick = () => dateSheet({ value: F.date, title: 'Когда смотрели?', sub: F.title, onPick: d => { F.date = d; draw(); } });
+    body.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { F.date = shiftDays(+b.dataset.day); draw(); });
+    body.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { F.where = b.dataset.w; draw(); if (F.where === 'other') body.querySelector('[data-other]')?.focus(); });
+    body.querySelectorAll('[data-my] [data-s]').forEach(b => b.onclick = () => { const v = +b.dataset.s; F.stars = F.stars === v ? 0 : v; draw(); });
+    body.querySelector('[data-save]').onclick = async e => {
+      const btn = e.currentTarget;
+      if (!F.title.trim()) { toast('Напишите название фильма'); body.querySelector('[data-title]').focus(); return; }
+      if (F.where === 'other' && !F.other.trim()) { toast('Напишите кинотеатр или выберите «дома»'); return; }
+      btn.disabled = true; btn.textContent = F.file ? 'Загружаем афишу…' : 'Сохраняем…';
+      try {
+        const row = { title: F.title.trim(), watched_on: F.date, note: F.note.trim() || null,
+          at_home: F.where === 'home', place_id: F.where.startsWith('p:') ? F.where.slice(2) : null, cinema: F.where === 'other' ? F.other.trim() : null };
+        const oldPoster = f?.poster_path;
+        if (F.file) row.poster_path = await uploadPhoto(F.file);
+        else if (F.removed) row.poster_path = null;
+        let saved;
+        if (f) { await upd('films', f.id, row); saved = f; if (((f.ratings || {})[myId()] || 0) !== F.stars) await rateFilm(f, F.stars); }
+        else saved = await ins('films', { ...row, ratings: F.stars ? { [myId()]: F.stars } : {} });
+        if ((F.file || F.removed) && oldPoster) await removeFiles([oldPoster]);
+        await signUrls();
+        close(); go('#/album?tab=films'); render(); toast(f ? 'Сохранено' : 'Фильм в альбоме 🎬');
+      } catch (err) { handleErr(err); btn.disabled = false; btn.textContent = 'Сохранить'; }
+    };
+    body.querySelector('[data-delete]')?.addEventListener('click', async () => {
+      if (!(await confirmDialog(`Удалить «${f.title}»?`, 'Вместе с афишей и оценками. Вернуть не получится.'))) return;
+      try { await deleteFilm(f); close(); toast('Фильм удалён'); render(); } catch (err) { handleErr(err); }
+    });
+  };
+  draw();
+}
+
+// ----- 41 «+»: место или фильм
+function addAny() {
+  const r = parseRoute();
+  if (S.ctxGroup || r.parts[0] === 'travel') return addPlace();
+  if (r.parts[0] === 'album' && r.q.get('tab') === 'films') return filmSheet(null);
+  const { el, close } = openSheet(`<div class="stack-xs"><h2 class="h2">Что добавим?</h2></div>
+    <div class="col" style="gap:12px">
+      <button class="add-opt" data-o="place"><span class="bub" style="background:var(--peach)">${icon('pin', 26)}</span><span class="col grow"><span class="t-card">Место</span><span class="t-sub">Кафе, выставка, прогулка — куда хотим сходить</span></span>${icon('right', 22)}</button>
+      <button class="add-opt" data-o="film"><span class="bub" style="background:var(--sky)">${icon('film', 26)}</span><span class="col grow"><span class="t-card">Фильм</span><span class="t-sub">Посмотрели в кино или дома — с афишей и оценками</span></span>${icon('right', 22)}</button></div>`);
+  el.querySelector('[data-o=place]').onclick = () => { close(); addPlace(); };
+  el.querySelector('[data-o=film]').onclick = () => { close(); filmSheet(null); };
 }
 
 // =========================================================
@@ -2279,7 +2515,7 @@ async function setSession(session) {
 
 function seedDemo() {
   S.space = { id: 'demo', name: 'Наш список', invite_code: 'ZRN482' };
-  S.members = [{ display_name: 'Я' }, { display_name: 'Ты' }];
+  S.members = [{ display_name: 'Я', user_id: 'me' }, { display_name: 'Ты', user_id: 'friend' }];
   const G = (id, name, kind, color, extra = {}) => ({ id, space_id: 'demo', name, kind, cover_color: color, sort_order: 0, created_at: '', ...extra });
   S.groups = [G('g1', 'Минск', 'city', 'peach'), G('g2', 'Брест', 'city', 'sage'),
     G('g3', 'Италия', 'trip', 'sky', { trip_status: 'dream' }), G('g4', 'Грузия', 'trip', 'butter', { trip_status: 'planned', trip_start: '2027-05-10' })];
@@ -2306,7 +2542,14 @@ function seedDemo() {
     return 'demo/' + id;
   };
   const F = (id, vid, path, n) => ({ id, space_id: 'demo', visit_id: vid, path, sort_order: n });
-  S.hasRoom = S.hasKinds = true;
+  S.hasRoom = S.hasKinds = S.hasFilms = true;
+  const poster = (id, c1, c2) => { S.urls.set('demo/' + id, 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="200" height="300" fill="url(#g)"/><circle cx="140" cy="90" r="24" fill="#fff" fill-opacity=".8"/><path d="M0 230 Q100 170 200 230 V300 H0Z" fill="#000" fill-opacity=".18"/></svg>`)); return 'demo/' + id; };
+  const FM = (id, title, d, extra = {}) => ({ id, space_id: 'demo', title, watched_on: d, ratings: {}, created_at: d, ...extra });
+  S.films = [FM('fm1', 'Тихая гавань', '2026-11-14', { place_id: 'pk', poster_path: poster('fp1', '#CFDDE6', '#8FB3CC'), ratings: { me: 4, friend: 5 }, note: 'Плакали в конце, обе' }),
+    FM('fm2', 'Лето в Тбилиси', '2026-11-08', { at_home: true, poster_path: poster('fp2', '#F6D3BF', '#E8A07F'), ratings: { me: 5 } }),
+    FM('fm3', 'Северный ветер', '2026-10-26', { cinema: 'Октябрь', poster_path: poster('fp3', '#DCD3EA', '#8E7FB0') }),
+    FM('fm4', 'Кофе с корицей', '2026-10-12', { at_home: true })];
+  S.places.push(P('pk', 'g1', 'Кинотеатр «Москва»', ['кино'], { kinds: ['kino'] }));
   S.room = { owned: ['armchair', 'monstera'], placed: {} };
   if (new URLSearchParams(location.search).has('full')) S.room.owned = SHOP.map(i => i.id);
   for (const o of new URLSearchParams(location.search).getAll('own')) S.room.owned.push(o);
@@ -2329,6 +2572,7 @@ function seedDemo() {
       vmenu: () => { const v = S.visits.find(x => x.id === id); visitMenu(placeById(v.place_id), v); },
       addtravel: () => addPlace(), switch: () => switchSpaceSheet(), viewer: () => document.querySelector('[data-ph="1"]')?.click(), viewer2: () => { const v = [...document.querySelectorAll('[data-ph]')]; v[v.length - 2]?.click(); },
       pick: () => pickPoint({ lat: 53.9071, lng: 27.5529, title: 'Кофейня «Зерно»', query: new URLSearchParams(location.search).get('pq') || '', onDone: () => {} }),
+      newfilm: () => filmSheet(id ? S.films.find(f => f.id === id) : null), filmv: () => filmViewer(S.films, 0), add: () => addAny(),
       ach: () => achModal(achById(id || 'regulars')), welcome: () => welcomeModal(roomCalc()), achd: () => achSheet(achById(id || 'gourmets')), slot: () => slotSheet(id || 'floorL'),
       item: () => itemSheet(itemById(id || 'sofa')), film: () => storageSheet(),
       date: () => dateSheet({ value: '2026-09-14', sub: 'Кофейня «Зерно»', onPick: () => {} }), date2: () => dateSheet({ sub: 'Кофейня «Зерно»', onPick: () => {} }),

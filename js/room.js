@@ -126,20 +126,26 @@ const daysBetween = (a, b) => (Date.parse(b) - Date.parse(a)) / 864e5;
 
 // Проходим визиты по датам и запоминаем, когда какое достижение получено.
 // data: { places, groups, visits, photos }
-export function computeAchievements({ places, groups, visits, photos }) {
+export const filmInCinema = f => !f.at_home && !!(f.place_id || f.cinema);
+export function computeAchievements({ places, groups, visits, photos, films = [] }) {
   const placeById = new Map(places.map(p => [p.id, p]));
   const groupById = new Map(groups.map(g => [g.id, g]));
   const photosPerVisit = new Map();
   for (const f of photos) photosPerVisit.set(f.visit_id, (photosPerVisit.get(f.visit_id) || 0) + 1);
   const vs = visits.filter(v => placeById.has(v.place_id))
     .sort((a, b) => a.visited_on.localeCompare(b.visited_on) || String(a.created_at).localeCompare(String(b.created_at)));
-  const st = { visits: 0, photos: 0, places: 0, groups: 0, trips: 0, maxSame: 0, comeback: 0, monthMax: 0, dreams: 0, seasons: 0, streak: 0, kinoVisits: 0,
+  const st = { visits: 0, films: 0, photos: 0, places: 0, groups: 0, trips: 0, maxSame: 0, comeback: 0, monthMax: 0, dreams: 0, seasons: 0, streak: 0, kinoVisits: 0,
     kind: { cafe: 0, kino: 0, art: 0, nature: 0, extreme: 0 } };
   const perPlace = new Map(), lastAt = new Map(), groupSet = new Set(), tripSet = new Set(), months = new Map(), seasonSet = new Set();
   const kindSets = Object.fromEntries(KINDS.map(k => [k.id, new Set()]));
   const got = new Map(); // id → дата получения
   const check = date => { for (const a of ACHIEVEMENTS) if (!got.has(a.id) && a.value(st) >= a.goal) got.set(a.id, date); };
-  for (const v of vs) {
+  // фильмы — отдельные события: +1 стаканчик, а походы в кинотеатр идут в «Киноманов» и «Кинозал»
+  const events = [...vs.map(v => ({ d: v.visited_on, c: String(v.created_at), v })), ...films.map(f => ({ d: f.watched_on, c: String(f.created_at), f }))]
+    .sort((a, b) => a.d.localeCompare(b.d) || a.c.localeCompare(b.c));
+  for (const ev of events) {
+    if (ev.f) { st.films++; if (filmInCinema(ev.f)) st.kinoVisits++; check(ev.d); continue; }
+    const v = ev.v;
     const p = placeById.get(v.place_id), g = groupById.get(p.group_id), d = v.visited_on;
     st.visits++;
     st.photos += photosPerVisit.get(v.id) || 0;
@@ -166,9 +172,9 @@ export function computeAchievements({ places, groups, visits, photos }) {
   return { stats: st, got };
 }
 
-// Стаканчики: +1 за каждый визит + награды за достижения − потрачено в магазине
+// Стаканчики: +1 за каждый визит и фильм + награды за достижения − потрачено в магазине
 export function cupsBalance(stats, got, owned) {
-  const earned = stats.visits + ACHIEVEMENTS.reduce((s, a) => s + (got.has(a.id) ? a.cups || 0 : 0), 0);
+  const earned = stats.visits + (stats.films || 0) + ACHIEVEMENTS.reduce((s, a) => s + (got.has(a.id) ? a.cups || 0 : 0), 0);
   const spent = (owned || []).reduce((s, id) => s + (itemById(id)?.price || 0), 0);
   return { earned, spent, balance: earned - spent };
 }

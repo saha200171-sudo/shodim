@@ -1422,6 +1422,12 @@ function renderAlbum(q) {
   on('[data-ph]', 'click', (e, el) => openViewer(list, +el.dataset.ph));
 }
 
+// карточка улетает вверх и окно закрывается (свайп вверх)
+function flyUp(el, done) {
+  el.style.transition = 'transform .28s ease-in, opacity .28s ease-in';
+  el.style.transform = 'translateY(-110vh) rotate(-6deg)'; el.style.opacity = '0';
+  setTimeout(done, 240);
+}
 // ----- Просмотр фото: полароид увеличивается, листается свайпом / стрелками
 function openViewer(list, start) {
   if (!list.length) return;
@@ -1468,14 +1474,21 @@ function openViewer(list, start) {
   const onKey = e => { if (e.key === 'ArrowRight') step(1); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'Escape') close(); };
   document.addEventListener('keydown', onKey);
   // свайп
-  let x0 = null, dx = 0;
-  stage.addEventListener('pointerdown', e => { x0 = e.clientX; dx = 0; stage.setPointerCapture(e.pointerId); const pol = stage.firstElementChild; if (pol) pol.style.transition = 'none'; });
-  stage.addEventListener('pointermove', e => { if (x0 == null) return; dx = e.clientX - x0; const pol = stage.firstElementChild; if (pol) pol.style.transform = `translateX(${dx}px) rotate(calc(var(--tilt) + ${dx / 25}deg))`; });
+  // свайп: вбок — листать, вверх — закрыть
+  let x0 = null, y0 = 0, dx = 0, dy = 0;
+  stage.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; dx = dy = 0; stage.setPointerCapture(e.pointerId); const pol = stage.firstElementChild; if (pol) pol.style.transition = 'none'; });
+  stage.addEventListener('pointermove', e => {
+    if (x0 == null) return; dx = e.clientX - x0; dy = e.clientY - y0;
+    const pol = stage.firstElementChild; if (!pol) return;
+    if (dy < 0 && Math.abs(dy) > Math.abs(dx)) { pol.style.transform = `translateY(${dy}px) rotate(var(--tilt))`; pol.style.opacity = Math.max(.3, 1 + dy / 500); }
+    else { pol.style.transform = `translateX(${dx}px) rotate(calc(var(--tilt) + ${dx / 25}deg))`; pol.style.opacity = ''; }
+  });
   const end = () => {
     if (x0 == null) return; x0 = null;
-    const pol = stage.firstElementChild; if (pol) { pol.style.transition = ''; pol.style.transform = ''; }
+    const pol = stage.firstElementChild;
+    if (pol && dy < -90 && Math.abs(dy) > Math.abs(dx)) { flyUp(pol, close); return; }
+    if (pol) { pol.style.transition = ''; pol.style.transform = ''; pol.style.opacity = ''; }
     if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1);
-    else if (Math.abs(dx) < 6) { /* просто тап — ничего */ }
   };
   stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
   draw(0);
@@ -2136,10 +2149,22 @@ function filmViewer(list, start) {
   ov.addEventListener('click', e => { if (e.target === ov || e.target === stage) close(); });
   const onKey = e => { if (e.key === 'ArrowRight') step(1); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'Escape') close(); };
   document.addEventListener('keydown', onKey);
-  let x0 = null, dx = 0;
-  stage.addEventListener('pointerdown', e => { if (e.target.closest('[data-rate]')) return; x0 = e.clientX; dx = 0; });
-  stage.addEventListener('pointermove', e => { if (x0 != null) dx = e.clientX - x0; });
-  const end = () => { if (x0 == null) return; x0 = null; if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1); };
+  // свайп: вбок — листать, вверх — закрыть
+  let x0 = null, y0 = 0, dx = 0, dy = 0;
+  stage.addEventListener('pointerdown', e => { if (e.target.closest('[data-rate]')) return; x0 = e.clientX; y0 = e.clientY; dx = dy = 0; const t = stage.firstElementChild; if (t) t.style.transition = 'none'; });
+  stage.addEventListener('pointermove', e => {
+    if (x0 == null) return; dx = e.clientX - x0; dy = e.clientY - y0;
+    const t = stage.firstElementChild; if (!t) return;
+    if (dy < 0 && Math.abs(dy) > Math.abs(dx)) { t.style.transform = `translateY(${dy}px)`; t.style.opacity = Math.max(.3, 1 + dy / 500); }
+    else { t.style.transform = `translateX(${dx}px) rotate(${dx / 30}deg)`; t.style.opacity = ''; }
+  });
+  const end = () => {
+    if (x0 == null) return; x0 = null;
+    const t = stage.firstElementChild;
+    if (t && dy < -90 && Math.abs(dy) > Math.abs(dx)) { flyUp(t, close); return; }
+    if (t) { t.style.transition = ''; t.style.transform = ''; t.style.opacity = ''; }
+    if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1);
+  };
   stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
   draw(0);
 }

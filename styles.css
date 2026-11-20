@@ -704,12 +704,3 @@ input[type=search]::-webkit-search-cancel-button { display: none; }
 @media (min-width: 760px) {
   .tickets { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 28px 24px; }
 }
-
-/* «+ Добавить фильм» — пунктирный билет */
-.ticket.add-ticket { background: none; box-shadow: none; border: 1.5px dashed var(--dash); }
-.add-ticket .tk-noposter { display: grid; place-items: center; background: none; color: var(--accent); }
-.add-ticket .tk-tear::before, .add-ticket .tk-tear::after { border: 1.5px dashed var(--dash); box-sizing: border-box; top: 0; }
-.add-ticket .tk-tear::before { left: -23.5px; clip-path: inset(-2px -2px -2px calc(50% - 1.5px)); } /* видна только дуга внутрь билета */
-.add-ticket .tk-tear::after { right: -23.5px; clip-path: inset(-2px calc(50% - 1.5px) -2px -2px); }
-.add-ticket .t-cards { color: var(--muted); }
-.add-ticket:hover .tk-noposter { background: var(--card); }

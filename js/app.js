@@ -393,6 +393,7 @@ function renderInner() {
   if (a === 'invite') return renderInvite();
   if (a === 'room') return renderRoomRoute(b, q);
   if (a === 'map') return renderAllMap(q);
+  if (a === 'films') return renderFilms(q);
   renderHome();
 }
 
@@ -441,7 +442,7 @@ const navHTML = (active, fade = true) => `${fade ? '<div class="fade"></div>' : 
   <button class="item ${active === 'p' ? 'on' : ''}" data-go="#/">${icon('places', 24)}Места</button>
   <button class="item ${active === 'm' ? 'on' : ''}" data-go="#/map">${icon('map', 24)}Карта</button>
   <button class="plus" data-act="add" aria-label="Добавить место">${icon('plus', 26)}<span class="plus-label">Добавить</span></button>
-  <button class="item ${active === 'r' ? 'on' : ''}" data-go="#/room">${icon('home', 24)}Комната</button>
+  <button class="item ${active === 'f' ? 'on' : ''}" data-go="#/films">${icon('kind-kino', 24)}Фильмы</button>
   <button class="item ${active === 'a' ? 'on' : ''}" data-go="#/album">${icon('album', 24)}Альбом</button></nav>`;
 
 // =========================================================
@@ -569,7 +570,7 @@ function renderHome() {
     : 'пока без поездок — можно помечтать';
   app.innerHTML = `<div class="screen">
     <div class="head"><div class="col"><span class="hand-m accent">привет, это мы</span><h1 class="h1">Сходим?</h1></div>
-      <button class="avatars" data-go="#/invite" aria-label="Участники">${avatarsHTML()}</button></div>
+      <button class="avatars room-entry" data-go="#/room" aria-label="Наша комната">${avatarsHTML()}<span class="house">${icon('home', 14)}</span></button></div>
     <div class="card counter"><div class="num">${been}</div><div class="col grow">
       <span class="t-bold">${plural(been, 'место', 'места', 'мест')}, где мы уже были вместе</span>
       <span class="t-sub">${want ? `и ещё ${want} ${plural(want, 'ждёт', 'ждут', 'ждут')} нас в планах` : 'добавьте места, куда хотите сходить'}</span></div></div>
@@ -1406,7 +1407,6 @@ function renderAlbum(q) {
   for (const m of months) { m.cards = albumCards(m.items).map(c => { c.gi = list.length; c.tilt = TILT[list.length % 4]; list.push(c); return c; }); }
   app.innerHTML = `<div class="screen">
     <div class="col"><span class="hand-m accent">наши воспоминания</span><h1 class="h1">Альбом</h1></div>
-    ${albumTabs(false)}
     ${all.length ? `<div class="chips">${chips.map(([k, n]) => `<button class="chip ${f === k ? 'active' : ''}" data-go="#/album${k === 'all' ? '' : '?f=' + k}">${esc(n)}</button>`).join('')}</div>` : ''}
     ${!all.length ? `<div class="empty">
         <div class="polaroid" style="width:160px;transform:rotate(-4deg)"><span class="tape" style="background:var(--butter)"></span>
@@ -1670,7 +1670,7 @@ function renderRoom() {
       <button class="card rtile" data-go="#/room/ach"><span class="bub" style="background:var(--butter)">${icon('star')}</span><span class="t-cards">Достижения</span><span class="t-sub">${R.got.size} из ${ACHIEVEMENTS.length}</span></button>
     </div></div></div>
     <button class="link-btn" data-go="#/invite" style="align-self:center;font-size:15px">Участники и код приглашения</button>
-  </div>${navHTML('r')}`;
+  </div>${navHTML('')}`;
   bindCommon();
   bindScene(R);
   checkStorageWarning();
@@ -1711,7 +1711,7 @@ function screenPill(hot) {
   menu.innerHTML = `<button data-m="films"><span class="bub" style="background:var(--sky)">${icon('kind-kino', 18)}</span><span class="col"><span class="t-bold">Наши фильмы</span><span class="t-sub">${n ? `${n} ${plural(n, 'фильм', 'фильма', 'фильмов')}` : 'пока пусто'}</span></span></button>
     <button data-m="film"><span class="bub" style="background:var(--butter)">${icon('film', 18)}</span><span class="col"><span class="t-bold">Наша плёнка</span><span class="t-sub">место для фото</span></span></button>`;
   menu.style.cssText = `left:${pct(466, 720)};top:${pct(150, 330)}`;
-  menu.querySelector('[data-m=films]').onclick = e => { e.stopPropagation(); go('#/album?tab=films'); };
+  menu.querySelector('[data-m=films]').onclick = e => { e.stopPropagation(); go('#/films'); };
   menu.querySelector('[data-m=film]').onclick = e => { e.stopPropagation(); menu.remove(); storageSheet(); };
   hot.appendChild(menu);
   setTimeout(() => menu.remove(), 6000);
@@ -1761,7 +1761,7 @@ function renderShop(q) {
     <div class="chips">${CATS.map(([k, n]) => `<button class="chip ${cat === k ? 'active' : ''}" data-go="#/room/shop${k === 'all' ? '' : '?c=' + k}">${n}</button>`).join('')}</div>
     <div class="grid2">${list.map(it => shopCardHTML(it, R)).join('')}</div>
     <p class="t-sub center" style="margin:0">Трофеи не продаются — только заслужить достижениями.</p>
-  </div>${navHTML('r')}`;
+  </div>${navHTML('')}`;
   bindCommon();
   on('[data-item]', 'click', (e, el) => itemSheet(itemById(el.dataset.item)));
 }
@@ -1846,7 +1846,7 @@ function renderInventory() {
       <div class="grid2">${list.map(it => `<button class="card scard" data-slot="${it.slot}"><span class="scard-img" style="background:var(--${it.tile})"><img src="${it.art}" alt="" loading="lazy"></span>
         <span class="t-cards">${esc(it.name)}</span><span class="ptag ${shown.has(it.id) ? 'own' : 'plain'}">${shown.has(it.id) ? icon('check', 16) + 'в комнате' : 'в инвентаре'}</span></button>`).join('')}</div>`
       : `<div class="empty"><div class="stack-xs"><h2 class="h2">Пока пусто</h2><p class="t-body muted" style="margin:0">Купите первую вещь в магазине — стаканчики дают за походы вместе.</p></div><button class="btn" data-go="#/room/shop">В магазин</button></div>`}
-  </div>${navHTML('r')}`;
+  </div>${navHTML('')}`;
   bindCommon();
   on('[data-slot]', 'click', (e, el) => slotSheet(el.dataset.slot));
 }
@@ -1869,7 +1869,7 @@ function renderAchievements() {
     <div class="head"><button class="round" data-go="#/room" aria-label="Назад">${icon('back')}</button><span class="cups static">${R.got.size} из ${ACHIEVEMENTS.length}</span></div>
     <div class="col"><span class="hand-m accent">за походы вместе</span><h1 class="h1">Достижения</h1></div>
     <div class="col ach-list" style="gap:10px">${done.map(card).join('')}${todo.map(card).join('')}</div>
-  </div>${navHTML('r')}`;
+  </div>${navHTML('')}`;
   bindCommon();
   on('[data-ach]', 'click', (e, el) => achSheet(achById(el.dataset.ach)));
 }
@@ -1883,7 +1883,7 @@ function achSheet(a) {
       <span class="t-sub">${esc(a.text)} · ${a.cups ? `+${a.cups} ${cupsWord(a.cups)}` : `трофей «${esc(itemById(a.item).name)}»`}</span></div></div>
     <div class="stack-xs"><div class="row between"><span class="t-bold">${v} из ${a.goal}</span><span class="t-bold accent">${g ? `получено ${fmtDayMonth(R.got.get(a.id))}` : `ещё ${left}`}</span></div>
       <span class="pbar big"><span style="width:${(v / a.goal * 100).toFixed(1)}%"></span></span></div>
-    ${k ? `<div class="card info" style="background:var(--paper)"><div class="row wrap" style="gap:8px"><span class="t-body">${a.visitsKind ? 'Считаются фильмы в кинотеатре (Альбом → Фильмы) и визиты в места с отметкой' : 'Считаются разные места с отметкой'}</span><span class="chip kind on">${icon('kind-' + k.id, 18)}${k.name}</span></div>
+    ${k ? `<div class="card info" style="background:var(--paper)"><div class="row wrap" style="gap:8px"><span class="t-body">${a.visitsKind ? 'Считаются фильмы в кинотеатре (раздел «Фильмы») и визиты в места с отметкой' : 'Считаются разные места с отметкой'}</span><span class="chip kind on">${icon('kind-' + k.id, 18)}${k.name}</span></div>
       <span class="t-sub">${a.visitsKind ? 'Каждый визит засчитывается отдельно.' : 'Повторный визит в то же место не добавляет.'} Отметка ставится в карточке места: «Что это за место?».</span></div>
       ${counted.length ? `<div class="stack-xs"><span class="t-bold">Уже засчитаны</span><div class="chips">${counted.slice(0, 8).map(p => `<span class="chip paper">${esc(shortName(p.name))}</span>`).join('')}${counted.length > 8 ? `<span class="chip paper">+ ещё ${counted.length - 8}</span>` : ''}</div></div>` : ''}` : ''}`);
 }
@@ -1956,7 +1956,7 @@ function renderDream() {
       <span class="pbar big"><span style="width:${(n / total * 100).toFixed(1)}%"></span></span>
       <span class="t-sub">С замочком — то, что ещё впереди. ${esc(hint)}</span></div>
     <button class="btn" data-go="#/room">Вернуться в нашу комнату</button></div>
-  </div>${deskNav('r')}`;
+  </div>${deskNav('')}`;
   bindCommon();
 }
 
@@ -2048,17 +2048,16 @@ function renderFilms(q) {
   for (const f of list) { const k = f.watched_on.slice(0, 7); let m = months.find(x => x.k === k); if (!m) months.push(m = { k, items: [] }); m.items.push(f); }
   let n = 0;
   app.innerHTML = `<div class="screen">
-    <div class="col"><span class="hand-m accent">наши воспоминания</span><h1 class="h1">Альбом</h1></div>
-    ${albumTabs(true)}
+    <div class="col"><span class="hand-m accent">наше кино</span><h1 class="h1">Фильмы</h1></div>
     ${!S.hasFilms && !S.demo ? `<div class="kind-hint" style="cursor:default">${icon('lock', 18)}<span>Чтобы фильмы сохранялись, нужно один раз запустить <b>004_films.sql</b> в Supabase (SQL Editor).</span></div>` : ''}
-    ${all.length ? `<div class="chips">${[['all', 'Все'], ['cinema', 'В кино'], ['home', 'Дома']].map(([k, t]) => `<button class="chip ${w === k ? 'active' : ''}" data-go="#/album?tab=films${k === 'all' ? '' : '&w=' + k}">${t}</button>`).join('')}</div>` : ''}
+    ${all.length ? `<div class="chips">${[['all', 'Все'], ['cinema', 'В кино'], ['home', 'Дома']].map(([k, t]) => `<button class="chip ${w === k ? 'active' : ''}" data-go="#/films${k === 'all' ? '' : '?w=' + k}">${t}</button>`).join('')}</div>` : ''}
     ${!all.length ? `<div class="empty"><div class="ticket" style="width:150px;--tilt:-3deg;pointer-events:none"><span class="tk-poster"><span class="tk-noposter" style="background:var(--paper);border:1.5px dashed var(--dash)"></span></span><span class="tk-tear"></span><span class="tk-stub"><span class="hand-s muted">скоро здесь…</span></span></div>
         <div class="stack-xs"><h2 class="h2">Здесь будут наши фильмы</h2><p class="t-body muted" style="margin:0">Отмечайте фильмы, которые посмотрели вместе — в кино или дома. С афишей и оценками каждой.</p></div>
         <button class="btn" data-act="new-film">Добавить фильм</button></div>`
       : !list.length ? `<p class="t-sub center" style="margin:24px 0">Здесь пока нет фильмов</p>`
       : months.map(m => `<div class="month"><div class="mh"><span class="hand-l">${fmtMonth(m.k)}</span><span class="t-sub">${m.items.length} ${plural(m.items.length, 'фильм', 'фильма', 'фильмов')}</span></div>
           <div class="tickets">${m.items.map(f => ticketHTML(f, n++)).join('')}</div></div>`).join('')}
-  </div>${navHTML('a')}`;
+  </div>${navHTML('f')}`;
   bindCommon();
   on('[data-act=new-film]', 'click', () => filmSheet(null));
   on('[data-film]', 'click', (e, el) => filmViewer(list, list.findIndex(f => f.id === el.dataset.film)));
@@ -2158,7 +2157,7 @@ function filmSheet(f) {
   const posterSrc = () => F.fileUrl || (!F.removed && f?.poster_path ? url(f.poster_path) : null);
   const draw = () => {
     const fr = friend(), frStars = f ? (f.ratings || {})[friendId()] || 0 : 0;
-    body.innerHTML = `<div class="stack-xs"><h2 class="h2">${f ? 'Изменить фильм' : 'Новый фильм'}</h2><span class="t-sub">появится в альбоме на вкладке «Фильмы»</span></div>
+    body.innerHTML = `<div class="stack-xs"><h2 class="h2">${f ? 'Изменить фильм' : 'Новый фильм'}</h2><span class="t-sub">появится в разделе «Фильмы»</span></div>
       <div class="film-top">
         <label class="poster-pick">${posterSrc() ? `<img src="${esc(posterSrc())}" alt=""><button type="button" class="x" data-rmp aria-label="Убрать">${icon('close', 16)}</button>` : `${icon('camera', 26)}<span>афиша</span>`}<input type="file" accept="image/*" hidden data-file></label>
         <div class="col grow" style="gap:8px"><label class="label" for="ft">Название</label><input id="ft" class="input" data-title placeholder="Название фильма" value="${esc(F.title)}">
@@ -2205,7 +2204,7 @@ function filmSheet(f) {
         else saved = await ins('films', { ...row, ratings: F.stars ? { [myId()]: F.stars } : {} });
         if ((F.file || F.removed) && oldPoster) await removeFiles([oldPoster]);
         await signUrls();
-        close(); go('#/album?tab=films'); render(); toast(f ? 'Сохранено' : 'Фильм в альбоме 🎬');
+        close(); go('#/films'); render(); toast(f ? 'Сохранено' : 'Фильм добавлен 🎬');
       } catch (err) { handleErr(err); btn.disabled = false; btn.textContent = 'Сохранить'; }
     };
     body.querySelector('[data-delete]')?.addEventListener('click', async () => {
@@ -2220,7 +2219,7 @@ function filmSheet(f) {
 function addAny() {
   const r = parseRoute();
   if (S.ctxGroup || r.parts[0] === 'travel') return addPlace();
-  if (r.parts[0] === 'album' && r.q.get('tab') === 'films') return filmSheet(null);
+  if (r.parts[0] === 'films' || (r.parts[0] === 'album' && r.q.get('tab') === 'films')) return filmSheet(null);
   const { el, close } = openSheet(`<div class="stack-xs"><h2 class="h2">Что добавим?</h2></div>
     <div class="col" style="gap:12px">
       <button class="add-opt" data-o="place"><span class="bub" style="background:var(--peach)">${icon('pin', 26)}</span><span class="col grow"><span class="t-card">Место</span><span class="t-sub">Кафе, выставка, прогулка — куда хотим сходить</span></span>${icon('right', 22)}</button>
